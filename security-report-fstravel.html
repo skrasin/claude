@@ -1,0 +1,452 @@
+<title>Безопасность fstravel.com</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&family=IBM+Plex+Serif:ital,wght@0,400;1,400&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+  :root {
+    --ground: #f5f7f9;
+    --surface: #ffffff;
+    --surface-2: #eef2f6;
+    --ink: #14202e;
+    --muted: #566577;
+    --faint: #7c8b9c;
+    --border: #dde4ec;
+    --border-strong: #c6d0da;
+    --accent: #0f6e6a;
+    --accent-ink: #0a4f4c;
+    --p0: #c02b45;
+    --p0-bg: #fbe9ed;
+    --p1: #a9680a;
+    --p1-bg: #f9efdd;
+    --p2: #2b6cb0;
+    --p2-bg: #e7f0fa;
+    --org: #6b4bb0;
+    --org-bg: #efeafa;
+    --shadow: 0 1px 2px rgba(20,32,46,.06), 0 8px 24px rgba(20,32,46,.05);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground: #0d131b;
+      --surface: #141d28;
+      --surface-2: #1b2632;
+      --ink: #e7eef5;
+      --muted: #9aabbd;
+      --faint: #6f8091;
+      --border: #253240;
+      --border-strong: #33465a;
+      --accent: #38b6ab;
+      --accent-ink: #6fd3c9;
+      --p0: #f0728a;
+      --p0-bg: #331821;
+      --p1: #e0a44a;
+      --p1-bg: #2f2413;
+      --p2: #6ba8e6;
+      --p2-bg: #14232f;
+      --org: #b298ec;
+      --org-bg: #211932;
+      --shadow: 0 1px 2px rgba(0,0,0,.3), 0 10px 30px rgba(0,0,0,.35);
+    }
+  }
+  :root[data-theme="dark"] {
+    --ground: #0d131b;
+    --surface: #141d28;
+    --surface-2: #1b2632;
+    --ink: #e7eef5;
+    --muted: #9aabbd;
+    --faint: #6f8091;
+    --border: #253240;
+    --border-strong: #33465a;
+    --accent: #38b6ab;
+    --accent-ink: #6fd3c9;
+    --p0: #f0728a;
+    --p0-bg: #331821;
+    --p1: #e0a44a;
+    --p1-bg: #2f2413;
+    --p2: #6ba8e6;
+    --p2-bg: #14232f;
+    --org: #b298ec;
+    --org-bg: #211932;
+    --shadow: 0 1px 2px rgba(0,0,0,.3), 0 10px 30px rgba(0,0,0,.35);
+  }
+
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0;
+    background: var(--ground);
+    color: var(--ink);
+    font-family: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+    font-size: 17px;
+    line-height: 1.65;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 880px; margin: 0 auto; padding: 0 24px; }
+
+  /* ---- top bar ---- */
+  .topbar {
+    position: sticky; top: 0; z-index: 20;
+    background: color-mix(in srgb, var(--ground) 88%, transparent);
+    backdrop-filter: blur(10px);
+    border-bottom: 1px solid var(--border);
+  }
+  .topbar .row {
+    max-width: 880px; margin: 0 auto; padding: 12px 24px;
+    display: flex; align-items: center; gap: 12px;
+  }
+  .brand { display: flex; align-items: center; gap: 10px; font-weight: 600; letter-spacing: .01em; }
+  .brand .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 20%, transparent); }
+  .brand .u { color: var(--faint); font-weight: 400; font-family: "IBM Plex Mono", monospace; font-size: 13px; }
+  .spacer { flex: 1; }
+  .toggle {
+    font: 500 13px "IBM Plex Mono", monospace;
+    color: var(--muted); background: var(--surface); border: 1px solid var(--border);
+    border-radius: 8px; padding: 6px 11px; cursor: pointer; display: inline-flex; gap: 6px; align-items: center;
+  }
+  .toggle:hover { border-color: var(--border-strong); color: var(--ink); }
+  .toggle:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  /* ---- hero ---- */
+  header.hero { padding: 60px 0 30px; }
+  .eyebrow {
+    font: 600 12.5px "IBM Plex Mono", monospace; letter-spacing: .16em; text-transform: uppercase;
+    color: var(--accent-ink); margin: 0 0 18px;
+  }
+  h1 {
+    font-size: clamp(32px, 6vw, 52px); line-height: 1.05; margin: 0 0 20px;
+    font-weight: 700; letter-spacing: -.02em; text-wrap: balance;
+  }
+  h1 .sub { display: block; font-size: clamp(17px, 3vw, 21px); font-weight: 400; color: var(--muted); letter-spacing: 0; margin-top: 14px; line-height: 1.4; }
+  .meta { display: flex; flex-wrap: wrap; gap: 10px 22px; margin-top: 26px; font-family: "IBM Plex Mono", monospace; font-size: 13px; color: var(--muted); }
+  .meta b { color: var(--ink); font-weight: 500; }
+  .meta .k { color: var(--faint); }
+
+  /* ---- notice ---- */
+  .notice {
+    margin: 34px 0 8px; background: var(--surface); border: 1px solid var(--border);
+    border-left: 4px solid var(--p1); border-radius: 12px; padding: 20px 22px; box-shadow: var(--shadow);
+  }
+  .notice h3 { margin: 0 0 8px; font-size: 15px; letter-spacing: .01em; display: flex; align-items: center; gap: 9px; }
+  .notice h3 .tag { font: 600 11px "IBM Plex Mono", monospace; letter-spacing: .1em; text-transform: uppercase; color: var(--p1); background: var(--p1-bg); padding: 3px 8px; border-radius: 6px; }
+  .notice p { margin: 0; color: var(--muted); font-size: 15px; }
+
+  /* ---- sections ---- */
+  section { padding: 46px 0 8px; }
+  .sec-head { display: flex; align-items: baseline; gap: 14px; margin-bottom: 6px; border-bottom: 1px solid var(--border); padding-bottom: 14px; }
+  .sec-num { font: 600 13px "IBM Plex Mono", monospace; color: var(--faint); }
+  h2 { font-size: clamp(22px, 4vw, 28px); margin: 0; font-weight: 700; letter-spacing: -.01em; text-wrap: balance; }
+  .lead { font-family: "IBM Plex Serif", Georgia, serif; font-size: 19px; line-height: 1.6; color: var(--ink); margin: 22px 0; }
+  .lead em { color: var(--accent-ink); font-style: italic; }
+  p { max-width: 68ch; }
+
+  /* ---- priority matrix ---- */
+  .matrix { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 14px; margin: 22px 0 6px; }
+  .mcard { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 18px 18px 20px; box-shadow: var(--shadow); position: relative; overflow: hidden; }
+  .mcard::before { content:""; position:absolute; left:0; top:0; bottom:0; width:5px; }
+  .mcard.p0::before { background: var(--p0); } .mcard.p1::before { background: var(--p1); }
+  .mcard.p2::before { background: var(--p2); } .mcard.org::before { background: var(--org); }
+  .mcard .lvl { font: 600 12px "IBM Plex Mono", monospace; letter-spacing: .08em; text-transform: uppercase; }
+  .mcard.p0 .lvl { color: var(--p0); } .mcard.p1 .lvl { color: var(--p1); }
+  .mcard.p2 .lvl { color: var(--p2); } .mcard.org .lvl { color: var(--org); }
+  .mcard .cap { font-size: 13.5px; color: var(--muted); margin-top: 4px; }
+  .mcard ul { margin: 12px 0 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 7px; }
+  .mcard li { font-size: 14px; color: var(--ink); padding-left: 16px; position: relative; line-height: 1.4; }
+  .mcard li::before { content:""; position:absolute; left:2px; top:9px; width:5px; height:5px; border-radius:50%; background: var(--border-strong); }
+
+  /* ---- vector table ---- */
+  .table-scroll { overflow-x: auto; margin: 22px 0; border: 1px solid var(--border); border-radius: 12px; box-shadow: var(--shadow); }
+  table { border-collapse: collapse; width: 100%; min-width: 620px; background: var(--surface); font-size: 14.5px; }
+  thead th { text-align: left; font: 600 12px "IBM Plex Mono", monospace; letter-spacing: .06em; text-transform: uppercase; color: var(--faint); padding: 13px 16px; border-bottom: 1px solid var(--border-strong); background: var(--surface-2); }
+  tbody td { padding: 13px 16px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  tbody tr:last-child td { border-bottom: none; }
+  tbody td:first-child { font-weight: 600; color: var(--ink); }
+  tbody td:last-child { color: var(--muted); }
+
+  /* ---- recommendation cards ---- */
+  .recs { display: flex; flex-direction: column; gap: 16px; margin: 24px 0; }
+  .rec { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 20px 22px; box-shadow: var(--shadow); position: relative; }
+  .rec { border-left: 4px solid var(--stripe, var(--border-strong)); }
+  .rec.p0 { --stripe: var(--p0); } .rec.p1 { --stripe: var(--p1); } .rec.p2 { --stripe: var(--p2); } .rec.org { --stripe: var(--org); }
+  .rec-top { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; }
+  .chip { font: 600 11px "IBM Plex Mono", monospace; letter-spacing: .1em; text-transform: uppercase; padding: 4px 9px; border-radius: 6px; white-space: nowrap; }
+  .chip.p0 { color: var(--p0); background: var(--p0-bg); } .chip.p1 { color: var(--p1); background: var(--p1-bg); }
+  .chip.p2 { color: var(--p2); background: var(--p2-bg); } .chip.org { color: var(--org); background: var(--org-bg); }
+  .rec h3 { margin: 0; font-size: 17.5px; font-weight: 600; letter-spacing: -.005em; }
+  .rec ul { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 8px; }
+  .rec ul li { color: var(--muted); }
+  .rec ul li strong { color: var(--ink); font-weight: 600; }
+  .rec ul li code, .inline-code { font-family: "IBM Plex Mono", monospace; font-size: 13px; background: var(--surface-2); border: 1px solid var(--border); border-radius: 5px; padding: 1px 6px; color: var(--accent-ink); }
+
+  /* ---- top10 ---- */
+  .steps { counter-reset: step; list-style: none; margin: 24px 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(360px, 1fr)); gap: 12px; }
+  .steps li { counter-increment: step; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 16px 18px 16px 56px; position: relative; box-shadow: var(--shadow); font-size: 15px; color: var(--muted); }
+  .steps li strong { color: var(--ink); font-weight: 600; }
+  .steps li::before { content: counter(step, decimal-leading-zero); position: absolute; left: 16px; top: 15px; font: 600 14px "IBM Plex Mono", monospace; color: var(--accent); }
+
+  /* ---- checklist ---- */
+  .checks { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 16px; margin: 22px 0; }
+  .checkgroup { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 18px 20px; box-shadow: var(--shadow); }
+  .checkgroup h4 { margin: 0 0 12px; font: 600 12px "IBM Plex Mono", monospace; letter-spacing: .08em; text-transform: uppercase; color: var(--accent-ink); }
+  .checkgroup ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+  .checkgroup li { padding-left: 26px; position: relative; font-size: 14px; color: var(--muted); line-height: 1.5; }
+  .checkgroup li::before { content: "▢"; position: absolute; left: 0; top: -1px; color: var(--accent); font-size: 15px; }
+  .checkgroup li code { font-family: "IBM Plex Mono", monospace; font-size: 12.5px; color: var(--ink); }
+  .warn { margin: 4px 0 0; font-size: 14px; color: var(--p1); background: var(--p1-bg); border: 1px solid color-mix(in srgb, var(--p1) 30%, transparent); border-radius: 10px; padding: 14px 16px; }
+  .warn strong { color: var(--p1); }
+
+  /* ---- footer ---- */
+  footer { margin-top: 60px; border-top: 1px solid var(--border); padding: 30px 0 70px; color: var(--faint); font-size: 14px; }
+  footer a { color: var(--accent-ink); text-decoration: none; border-bottom: 1px solid color-mix(in srgb, var(--accent) 40%, transparent); }
+  footer a:hover { border-bottom-color: var(--accent); }
+  footer .src { display: flex; flex-direction: column; gap: 7px; margin: 12px 0 24px; }
+  footer .fine { font-family: "IBM Plex Mono", monospace; font-size: 12px; line-height: 1.7; color: var(--faint); }
+
+  @media (max-width: 560px) {
+    body { font-size: 16px; }
+    .steps { grid-template-columns: 1fr; }
+    header.hero { padding: 40px 0 20px; }
+  }
+</style>
+
+<div class="topbar">
+  <div class="row">
+    <span class="brand"><span class="dot"></span>Анализ безопасности <span class="u">fstravel.com</span></span>
+    <span class="spacer"></span>
+    <button class="toggle" id="tt" aria-label="Переключить тему">◐ Тема</button>
+  </div>
+</div>
+
+<div class="wrap">
+  <header class="hero">
+    <p class="eyebrow">Пассивный анализ угроз · Витрина как вектор атаки</p>
+    <h1>Витрина под угрозой
+      <span class="sub">Как публичный сайт туроператора может стать входом к внутренним системам, платёжным шлюзам и данным клиентов — и что с этим делать.</span>
+    </h1>
+    <div class="meta">
+      <span><span class="k">Объект</span> <b>https://fstravel.com/</b></span>
+      <span><span class="k">Тип работ</span> <b>Модель угроз + рекомендации</b></span>
+      <span><span class="k">Дата</span> <b>23.08.2026</b></span>
+      <span><span class="k">Активная эксплуатация</span> <b>не проводилась</b></span>
+    </div>
+
+    <div class="notice">
+      <h3><span class="tag">Ограничение</span> Живое сканирование не выполнялось</h3>
+      <p>Исходящий доступ к <span class="inline-code">fstravel.com</span> заблокирован сетевой политикой окружения (403 на CONNECT); обход политики не применялся. Поэтому документ — это модель угроз, приоритизированные рекомендации и чек-лист безопасных пассивных проверок, а не находки по фактической текущей конфигурации. Раздел 6 нужно прогнать по «живому» сайту вручную либо из окружения с доступом.</p>
+    </div>
+  </header>
+
+  <section id="thesis">
+    <div class="sec-head"><span class="sec-num">01</span><h2>Витрина почти никогда не бывает статичной</h2></div>
+    <p class="lead">Формально это сайт с информацией. На практике на том же домене и поддоменах у туроператора живут поиск и подбор туров, онлайн-бронирование и <em>оплата</em>, личный кабинет клиента, B2B-портал для 670+ агентств и десятки форм — и именно эти динамические функции, а не статический контент, образуют поверхность атаки.</p>
+    <p>Первый шаг — <strong>инвентаризация всей поверхности</strong>: домены, поддомены, эндпоинты, формы, API, интеграции. Защитить можно только то, что учтено. Ключевой архитектурный принцип: публичный сайт не должен иметь прямого сетевого доступа к внутренним системам и продакшн-БД — между ними сегментация (DMZ), API-gateway с авторизацией и сервисные учётки с минимальными правами.</p>
+  </section>
+
+  <section id="vectors">
+    <div class="sec-head"><span class="sec-num">02</span><h2>Как витрина превращается в вектор к внутренним системам</h2></div>
+    <div class="table-scroll">
+      <table>
+        <thead><tr><th>Вектор</th><th>Механизм</th><th>К чему ведёт</th></tr></thead>
+        <tbody>
+          <tr><td>Инъекции через формы, поиск, параметры</td><td>SQLi / NoSQLi / command / SSTI</td><td>Доступ к БД и CRM, выполнение кода на backend</td></tr>
+          <tr><td>SSRF через серверные интеграции</td><td>Сервер бронирования ходит по управляемому извне URL</td><td>Внутренняя сеть, метаданные облака, служебные API</td></tr>
+          <tr><td>Некорректная авторизация (IDOR / BOLA)</td><td>Перебор ID заказа или клиента</td><td>Чужие брони, персональные данные, документы</td></tr>
+          <tr><td>Веб-скиммеры (Magecart)</td><td>Внедрённый сторонний JS крадёт данные карт с формы оплаты</td><td>Утечка платёжных данных, штрафы PCI</td></tr>
+          <tr><td>Захват поддомена, забытые dev/stage</td><td>Dangling DNS, открытые тестовые стенды</td><td>Фишинг под доверенным доменом, утечка исходников</td></tr>
+          <tr><td>Раскрытие секретов</td><td><span class="inline-code">.git</span>, <span class="inline-code">.env</span>, source maps, ключи в JS</td><td>Ключи API, доступ к внутренним сервисам</td></tr>
+          <tr><td>Слабая аутентификация B2B / админки</td><td>Брутфорс, отсутствие MFA, дефолтные креды</td><td>Захват кабинета → массовый доступ к данным</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section id="matrix">
+    <div class="sec-head"><span class="sec-num">03</span><h2>Матрица приоритетов</h2></div>
+    <div class="matrix">
+      <div class="mcard p0"><div class="lvl">P0 · Критично</div><div class="cap">Устранить в первую очередь</div>
+        <ul><li>Платёжные данные и anti-Magecart</li><li>Сегментация витрина ↔ внутренние</li><li>Инъекции ввода</li><li>IDOR / BOLA</li><li>Раскрытие секретов на проде</li></ul></div>
+      <div class="mcard p1"><div class="lvl">P1 · Высокий</div><div class="cap">Ближайший спринт</div>
+        <ul><li>MFA и защита аутентификации</li><li>Защита ПДн · 152-ФЗ</li><li>API-безопасность</li><li>TLS и security-заголовки</li><li>Поддомены, dev-стенды</li><li>SPF / DKIM / DMARC</li></ul></div>
+      <div class="mcard p2"><div class="lvl">P2 · Важно</div><div class="cap">Планово</div>
+        <ul><li>Supply chain сторонних скриптов</li><li>Загрузка файлов</li><li>SSRF-защита интеграций</li><li>Rate limiting и антибот</li><li>Логирование и мониторинг</li><li>Патч-менеджмент</li></ul></div>
+      <div class="mcard org"><div class="lvl">ORG · Процессы</div><div class="cap">Постоянно</div>
+        <ul><li>security.txt</li><li>Регулярный пентест / bug bounty</li><li>Безопасная разработка (SSDLC)</li><li>Аудиты PCI DSS и 152-ФЗ</li></ul></div>
+    </div>
+  </section>
+
+  <section id="recs">
+    <div class="sec-head"><span class="sec-num">04</span><h2>Рекомендации по направлениям</h2></div>
+    <div class="recs">
+
+      <div class="rec p0"><div class="rec-top"><span class="chip p0">P0</span><h3>Платёжные данные и защита от веб-скиммеров</h3></div>
+        <ul>
+          <li><strong>Не обрабатывать карты у себя.</strong> Hosted payment page или изолированный iframe / редирект на страницу эквайера (PCI SAQ A).</li>
+          <li><strong>Обязательный 3-D Secure 2.0</strong> на всех платёжных операциях.</li>
+          <li>На страницах оплаты — строгий <span class="inline-code">CSP</span> и ноль сторонних скриптов (аналитика, чаты, теги недопустимы на checkout).</li>
+          <li><strong>Subresource Integrity (SRI)</strong> для всех внешних <span class="inline-code">&lt;script&gt;</span> и <span class="inline-code">&lt;link&gt;</span>; мониторинг целостности JS.</li>
+          <li>Подтвердить фактический уровень соответствия <strong>PCI DSS</strong>.</li>
+        </ul></div>
+
+      <div class="rec p0"><div class="rec-top"><span class="chip p0">P0</span><h3>Разделение витрины и внутренних систем</h3></div>
+        <ul>
+          <li>Сетевая сегментация: веб-фронт в DMZ, <strong>нет прямого пути</strong> к продакшн-БД, CRM, ERP.</li>
+          <li>Доступ к внутренним данным — только через API-gateway с аутентификацией и авторизацией.</li>
+          <li>Сервисные учётки по принципу наименьших привилегий; секреты в secret manager, не в коде на диске.</li>
+        </ul></div>
+
+      <div class="rec p0"><div class="rec-top"><span class="chip p0">P0</span><h3>Инъекции и валидация ввода</h3></div>
+        <ul>
+          <li>Только параметризованные запросы / ORM; запрет конкатенации ввода в SQL, команды, шаблоны.</li>
+          <li>Валидация по «белым спискам» и контекстное экранирование вывода (против XSS).</li>
+          <li>WAF в режиме блокировки как компенсирующий контроль — не замена исправлениям.</li>
+        </ul></div>
+
+      <div class="rec p0"><div class="rec-top"><span class="chip p0">P0</span><h3>Авторизация и IDOR / BOLA</h3></div>
+        <ul>
+          <li>Серверная проверка прав для <strong>каждого</strong> объекта (заказ, клиент, документ), а не по UI.</li>
+          <li>Непредсказуемые идентификаторы (UUID) вместо последовательных числовых ID.</li>
+          <li>Тест: может ли пользователь A открыть данные пользователя B, поменяв ID в запросе.</li>
+        </ul></div>
+
+      <div class="rec p0"><div class="rec-top"><span class="chip p0">P0</span><h3>Раскрытие секретов и артефактов на проде</h3></div>
+        <ul>
+          <li>Закрыть <span class="inline-code">/.git/</span>, <span class="inline-code">/.env</span>, бэкапы <span class="inline-code">.bak/.old/.zip</span>, <span class="inline-code">/debug</span>, <span class="inline-code">/phpinfo</span>, открытые source maps и swagger без авторизации.</li>
+          <li>Убрать из клиентского JS секретные ключи API — в браузер попадают только публичные ключи с ограничениями.</li>
+        </ul></div>
+
+      <div class="rec p1"><div class="rec-top"><span class="chip p1">P1</span><h3>Аутентификация и сессии</h3></div>
+        <ul>
+          <li><strong>MFA обязателен</strong> для админов, сотрудников и кабинетов турагентов — B2B-портал приоритетная цель.</li>
+          <li>Cookies: <span class="inline-code">Secure</span>, <span class="inline-code">HttpOnly</span>, <span class="inline-code">SameSite</span>; ротация сессии при логине.</li>
+          <li>Rate limiting против брутфорса и credential stuffing; единообразные ответы (против user enumeration).</li>
+          <li>Безопасное восстановление пароля: одноразовые токены с TTL, без утечки в реферере и логах.</li>
+        </ul></div>
+
+      <div class="rec p1"><div class="rec-top"><span class="chip p1">P1</span><h3>Защита клиентских данных · 152-ФЗ</h3></div>
+        <ul>
+          <li>Минимизация: не собирать и не отдавать лишнее; маскирование в интерфейсах.</li>
+          <li>Шифрование ПДн в покое и в транзите; ограничение экспорта и выгрузок.</li>
+          <li>Разграничение доступа сотрудников + журналирование обращений к данным.</li>
+          <li>Соответствие 152-ФЗ: согласия, локализация ПДн граждан РФ, политика конфиденциальности.</li>
+        </ul></div>
+
+      <div class="rec p1"><div class="rec-top"><span class="chip p1">P1</span><h3>API-безопасность · OWASP API Top 10</h3></div>
+        <ul>
+          <li>Инвентаризация эндпоинтов; закрытие теневых и устаревших версий API.</li>
+          <li>Авторизация на уровне объектов и функций; защита от mass assignment.</li>
+          <li>Отключить GraphQL introspection в проде; ввести rate limiting и квоты.</li>
+        </ul></div>
+
+      <div class="rec p1"><div class="rec-top"><span class="chip p1">P1</span><h3>Транспорт и HTTP-заголовки безопасности</h3></div>
+        <ul>
+          <li>Только TLS 1.2/1.3, современные шифры, корректная цепочка; редирект HTTP→HTTPS.</li>
+          <li><span class="inline-code">HSTS</span>, <span class="inline-code">CSP</span> (nonce / strict-dynamic), <span class="inline-code">X-Content-Type-Options</span>, <span class="inline-code">frame-ancestors</span>, <span class="inline-code">Referrer-Policy</span>, <span class="inline-code">Permissions-Policy</span>.</li>
+          <li>Убрать раскрытие версий в <span class="inline-code">Server</span> и <span class="inline-code">X-Powered-By</span>.</li>
+        </ul></div>
+
+      <div class="rec p1"><div class="rec-top"><span class="chip p1">P1</span><h3>Поддомены, DNS и почта</h3></div>
+        <ul>
+          <li>Инвентаризация поддоменов; поиск dangling-записей (риск subdomain takeover).</li>
+          <li>Закрыть публичные dev/staging/test-стенды — частый источник утечек и мягкая точка входа.</li>
+          <li>Настроить и проверить <strong>SPF, DKIM, DMARC</strong> (DMARC в quarantine/reject) против фишинга под брендом.</li>
+        </ul></div>
+
+      <div class="rec p2"><div class="rec-top"><span class="chip p2">P2</span><h3>Дополнительные меры</h3></div>
+        <ul>
+          <li><strong>Supply chain:</strong> аудит всех тегов, аналитики, чат-виджетов; минимизация, SRI, регулярный пересмотр.</li>
+          <li><strong>Загрузка файлов:</strong> валидация типа и размера, антивирус, хранение вне webroot, без выполнения.</li>
+          <li><strong>SSRF:</strong> белые списки хостов, запрет доступа к внутренним адресам и облачным метаданным.</li>
+          <li><strong>Rate limiting / антибот</strong> на формах, поиске туров и API против скрейпинга и DoS.</li>
+          <li><strong>Мониторинг:</strong> централизованные логи безопасности, алерты, контроль целостности файлов, план реагирования.</li>
+          <li><strong>Патч-менеджмент:</strong> актуальные версии CMS и библиотек, отслеживание CVE, отсутствие дефолтных учёток.</li>
+        </ul></div>
+
+      <div class="rec org"><div class="rec-top"><span class="chip org">ORG</span><h3>Организационные меры</h3></div>
+        <ul>
+          <li><span class="inline-code">/.well-known/security.txt</span> с контактом для ответственного раскрытия уязвимостей.</li>
+          <li>Регулярный внешний пентест (минимум раз в год и после крупных релизов), при желании bug bounty.</li>
+          <li>Безопасная разработка (SSDLC), ревью безопасности в релизном процессе.</li>
+          <li>Периодические аудиты соответствия PCI DSS и 152-ФЗ; требования к безопасности доступа для агентств.</li>
+        </ul></div>
+
+    </div>
+  </section>
+
+  <section id="top10">
+    <div class="sec-head"><span class="sec-num">05</span><h2>С чего начать прямо сейчас</h2></div>
+    <ol class="steps">
+      <li>Убедиться, что карты не обрабатываются на своей стороне; <strong>SRI + CSP</strong> и ноль сторонних скриптов на оплате; подтвердить 3-D Secure.</li>
+      <li>Проверить <strong>сегментацию</strong>: имеет ли веб-фронт прямой доступ к продакшн-БД или CRM.</li>
+      <li>Прогнать проверку на <strong>IDOR</strong> в личном кабинете и бронированиях.</li>
+      <li>Закрыть <strong><span class="inline-code">.git</span>, <span class="inline-code">.env</span></strong>, бэкапы, source maps, открытые swagger и debug.</li>
+      <li>Включить <strong>MFA</strong> для админов и кабинетов турагентов.</li>
+      <li>Настроить <strong>security-заголовки</strong> (HSTS, CSP, nosniff, frame-ancestors) и TLS-конфиг.</li>
+      <li>Инвентаризировать <strong>поддомены</strong>; закрыть dev/staging и dangling-записи.</li>
+      <li>Настроить <strong>SPF / DKIM / DMARC</strong>.</li>
+      <li>Добавить <strong>rate limiting</strong> на логин, восстановление пароля, формы и API.</li>
+      <li>Опубликовать <strong>security.txt</strong> и запланировать внешний пентест.</li>
+    </ol>
+  </section>
+
+  <section id="checks">
+    <div class="sec-head"><span class="sec-num">06</span><h2>Чек-лист безопасных пассивных проверок</h2></div>
+    <p>Неинвазивны и подходят для продакшена. Их не удалось выполнить из-за блокировки сети — прогоните вручную или из окружения с доступом.</p>
+    <div class="checks">
+      <div class="checkgroup"><h4>Заголовки и TLS</h4>
+        <ul>
+          <li><code>curl -sSI https://fstravel.com/</code> — наличие HSTS, CSP, nosniff, X-Frame-Options; отсутствие версий в Server</li>
+          <li>SSL Labs — оценка протоколов, шифров, цепочки</li>
+          <li>securityheaders.com — быстрая оценка заголовков</li>
+        </ul></div>
+      <div class="checkgroup"><h4>Раскрытие информации</h4>
+        <ul>
+          <li>Коды ответа: <code>/.git/HEAD</code>, <code>/.env</code>, <code>/server-status</code>, <code>/.well-known/security.txt</code>, <code>/robots.txt</code></li>
+          <li>Поиск <code>*.map</code> и ключей/токенов в клиентском JS</li>
+          <li>HTML <code>&lt;head&gt;</code>: generator, версии CMS, комментарии</li>
+        </ul></div>
+      <div class="checkgroup"><h4>Инфраструктура и домен</h4>
+        <ul>
+          <li>Перечисление поддоменов через crt.sh и CT-логи → dev/stage/dangling</li>
+          <li>Проверка SPF / DKIM / DMARC (mxtoolbox)</li>
+          <li>Fingerprint технологий (Wappalyzer) → сверка с известными CVE</li>
+        </ul></div>
+      <div class="checkgroup"><h4>Поверхность приложения</h4>
+        <ul>
+          <li>Инвентаризация форм и их <code>action</code>-URL; параметры поиска туров</li>
+          <li>Карта API: XHR/fetch из вкладки Network браузера</li>
+          <li>Открытые swagger / openapi / GraphQL introspection</li>
+        </ul></div>
+    </div>
+    <p class="warn"><strong>Важно:</strong> активные проверки — SQLi, IDOR, брутфорс, fuzzing, полноценный пентест — выполнять только по письменному согласованию, на согласованных стендах и во временном окне. Не по этому чек-листу.</p>
+  </section>
+
+  <footer>
+    <div class="src">
+      <strong style="color:var(--muted)">Открытые источники о компании</strong>
+      <a href="https://fstravel.com/kontakty/o-kompanii-funsun">FUN&amp;SUN — о компании</a>
+      <a href="https://www.atorus.ru/node/24">Ассоциация туроператоров — FUN&amp;SUN</a>
+      <a href="https://www.tadviser.ru/">TAdviser — FS Travel (ранее Fun&amp;Sun, TUI Russia)</a>
+    </div>
+    <p class="fine">Документ носит рекомендательный характер и не заменяет полноценный пентест и аудит по согласованию с владельцем системы. Живое сканирование в рамках подготовки не проводилось.</p>
+  </footer>
+</div>
+
+<script>
+  (function () {
+    var btn = document.getElementById('tt');
+    var root = document.documentElement;
+    function current() {
+      var s = root.getAttribute('data-theme');
+      if (s) return s;
+      return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    }
+    try {
+      var saved = localStorage.getItem('fst-theme');
+      if (saved === 'dark' || saved === 'light') root.setAttribute('data-theme', saved);
+    } catch (e) {}
+    btn.addEventListener('click', function () {
+      var next = current() === 'dark' ? 'light' : 'dark';
+      root.setAttribute('data-theme', next);
+      try { localStorage.setItem('fst-theme', next); } catch (e) {}
+    });
+  })();
+</script>
