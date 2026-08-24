@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#FF6B6B">
+<title>Мой дом мечты 🏡</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div id="app">
+
+  <!-- ЭКРАН: ГЛАВНАЯ -->
+  <section id="screen-home" class="screen active">
+    <header class="hero">
+      <div class="hero-sky">☁️ <span>☀️</span> ☁️</div>
+      <h1>🏡 Мой дом мечты</h1>
+      <p class="hero-sub">Придумай и построй дом своей мечты!</p>
+    </header>
+    <div id="house-list" class="house-list"></div>
+    <button id="btn-new-house" class="btn btn-primary btn-big btn-float">✨ Новый дом</button>
+  </section>
+
+  <!-- ЭКРАН: ИМЯ ДОМА -->
+  <section id="screen-name" class="screen">
+    <div class="panel-center">
+      <h2>Как назовём твой дом?</h2>
+      <input id="house-name-input" class="text-input" maxlength="24" placeholder="Например: Дом мечты">
+      <div class="row nav-row">
+        <button id="btn-name-back" class="btn btn-secondary">← Назад</button>
+        <button id="btn-name-next" class="btn btn-primary">Дальше →</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ЭКРАН: СНАРУЖИ -->
+  <section id="screen-exterior" class="screen">
+    <div class="editor-preview" id="exterior-preview"></div>
+    <div class="editor-tabs" id="exterior-tabs">
+      <button class="tab-btn active" data-tab="shape">🏠 Дом</button>
+      <button class="tab-btn" data-tab="wall">🎨 Стены</button>
+      <button class="tab-btn" data-tab="roof">🔺 Крыша</button>
+      <button class="tab-btn" data-tab="door">🚪 Дверь</button>
+      <button class="tab-btn" data-tab="window">🪟 Окна</button>
+      <button class="tab-btn" data-tab="yard">🌳 Двор</button>
+    </div>
+    <div class="editor-panel" id="exterior-panel"></div>
+    <div class="row nav-row">
+      <button id="btn-exterior-back" class="btn btn-secondary">← Назад</button>
+      <button id="btn-exterior-next" class="btn btn-primary">Комнаты →</button>
+    </div>
+  </section>
+
+  <!-- ЭКРАН: СПИСОК КОМНАТ -->
+  <section id="screen-rooms" class="screen">
+    <h2 class="screen-title">Выбери комнату 🚪</h2>
+    <div class="room-cards" id="room-cards"></div>
+    <div class="row nav-row">
+      <button id="btn-rooms-back" class="btn btn-secondary">← Дом снаружи</button>
+      <button id="btn-rooms-done" class="btn btn-primary">Готово! 🏠</button>
+    </div>
+  </section>
+
+  <!-- ЭКРАН: РЕДАКТОР КОМНАТЫ -->
+  <section id="screen-room" class="screen">
+    <h2 class="screen-title" id="room-title"></h2>
+    <div class="room-canvas-wrap">
+      <div class="room-canvas" id="room-canvas"></div>
+      <div class="item-toolbar" id="item-toolbar" hidden>
+        <button data-act="smaller">➖</button>
+        <button data-act="bigger">➕</button>
+        <button data-act="flip">🔄</button>
+        <button data-act="delete" class="toolbar-danger">🗑️</button>
+      </div>
+    </div>
+    <div class="editor-tabs" id="room-tabs">
+      <button class="tab-btn active" data-tab="furniture">🪑 Мебель</button>
+      <button class="tab-btn" data-tab="wallpaper">🎨 Обои</button>
+      <button class="tab-btn" data-tab="floor">🟫 Пол</button>
+    </div>
+    <div class="editor-panel" id="room-panel"></div>
+    <div class="row nav-row">
+      <button id="btn-room-back" class="btn btn-secondary">← Комнаты</button>
+    </div>
+  </section>
+
+  <!-- ЭКРАН: ГОТОВЫЙ ДОМ -->
+  <section id="screen-final" class="screen">
+    <h2 class="screen-title" id="final-title"></h2>
+    <div class="final-block" id="final-exterior"></div>
+    <div class="final-rooms" id="final-rooms"></div>
+    <div class="row nav-row">
+      <button id="btn-final-edit" class="btn btn-secondary">✏️ Редактировать</button>
+      <button id="btn-final-home" class="btn btn-primary">🏡 Мои дома</button>
+    </div>
+  </section>
+
+</div>
+<div id="toast" class="toast"></div>
+<script src="js/app.js"></script>
+</body>
+</html>
