@@ -162,6 +162,22 @@
     } catch (e) { /* ignore */ }
   }
 
+  var confirmYesHandler = null;
+  function showConfirm(message, onYes) {
+    document.getElementById('confirm-message').textContent = message;
+    document.getElementById('confirm-modal').hidden = false;
+    confirmYesHandler = onYes;
+  }
+  document.getElementById('confirm-yes').addEventListener('click', function () {
+    document.getElementById('confirm-modal').hidden = true;
+    if (confirmYesHandler) confirmYesHandler();
+    confirmYesHandler = null;
+  });
+  document.getElementById('confirm-no').addEventListener('click', function () {
+    document.getElementById('confirm-modal').hidden = true;
+    confirmYesHandler = null;
+  });
+
   var toastTimer = null;
   function showToast(msg) {
     var t = document.getElementById('toast');
@@ -789,11 +805,13 @@
     var del = ev.target.closest('[data-delete]');
     if (del) {
       var h = findHouse(del.dataset.delete);
-      if (h && window.confirm('Удалить дом «' + h.name + '»?')) {
-        state.houses = state.houses.filter(function (x) { return x.id !== h.id; });
-        saveCurrent();
-        playPop(380);
-        renderHome();
+      if (h) {
+        showConfirm('Удалить дом «' + h.name + '»?', function () {
+          state.houses = state.houses.filter(function (x) { return x.id !== h.id; });
+          saveCurrent();
+          playPop(380);
+          renderHome();
+        });
       }
       return;
     }
