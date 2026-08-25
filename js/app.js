@@ -1,837 +1,1149 @@
+/* ============================================================
+   Дом мечты — логика приложения.
+   Комната строится в одноточечной перспективе: предмет, стоящий
+   дальше от зрителя, действительно меньше и уходит за ближние.
+   ============================================================ */
 (function () {
   'use strict';
 
-  /* ============================ DATA ============================ */
+  var A = window.ASSETS;
+  var $ = function (id) { return document.getElementById(id); };
 
-  var STORAGE_KEY = 'kidsHouseGame.houses.v1';
+  /* ---------------------------------------------------------- геометрия комнаты */
 
-  var COLOR_PALETTE = [
-    '#FFFFFF', '#F8D7E3', '#FFE8B5', '#FFF6B0', '#D4F5C0',
-    '#C3E9FF', '#D9C7F0', '#FF6B6B', '#4ECDC4', '#4D96FF',
-    '#FFB84D', '#8B5E3C', '#3A3A3A'
-  ];
+  var ROOM = (function () {
+    var W = 1000, H = 750;
+    var HALF_CM = 350;                 /* полширины комнаты, см */
+    var WALL_CM = 270;                 /* высота стены, см */
+    var back = W / (HALF_CM * 2);      /* px на см у дальней стены */
+    var wallY = WALL_CM * back;
+    var DEPTH = 0.5;                   /* насколько крупнее предмет у зрителя */
 
-  var HOUSE_SHAPES = [
-    { id: 'cottage', label: 'Домик', emoji: '🏠' },
-    { id: 'twostory', label: 'Два этажа', emoji: '🏘️' },
-    { id: 'bungalow', label: 'Широкий дом', emoji: '🏡' }
-  ];
+    function pxAt(fy) { return back * (1 + DEPTH * fy); }
+    function xAt(cm, fy) { return W / 2 + cm * pxAt(fy); }
+    function yAt(fy) { return wallY + fy * (H - wallY); }
+    function fyFromY(y) { return clamp((y - wallY) / (H - wallY), 0, 1); }
+    function cmFromX(x, fy) { return (x - W / 2) / pxAt(fy); }
 
-  var ROOM_TYPES = [
-    {
-      id: 'living', label: 'Гостиная', emoji: '🛋️',
-      furniture: [
-        { id: 'sofa', emoji: '🛋️', label: 'Диван' },
-        { id: 'chair', emoji: '🪑', label: 'Кресло' },
-        { id: 'tv', emoji: '📺', label: 'Телевизор' },
-        { id: 'plant', emoji: '🪴', label: 'Растение' },
-        { id: 'picture', emoji: '🖼️', label: 'Картина' },
-        { id: 'lamp', emoji: '💡', label: 'Лампа' },
-        { id: 'books', emoji: '📚', label: 'Книги' },
-        { id: 'fish', emoji: '🐠', label: 'Аквариум' }
-      ]
-    },
-    {
-      id: 'bedroom', label: 'Спальня', emoji: '🛏️',
-      furniture: [
-        { id: 'bed', emoji: '🛏️', label: 'Кровать' },
-        { id: 'teddy', emoji: '🧸', label: 'Мишка' },
-        { id: 'mirror', emoji: '🪞', label: 'Зеркало' },
-        { id: 'lamp2', emoji: '💡', label: 'Лампа' },
-        { id: 'books2', emoji: '📚', label: 'Книги' },
-        { id: 'balloon', emoji: '🎈', label: 'Шарик' },
-        { id: 'star', emoji: '🌟', label: 'Ночник' },
-        { id: 'plant2', emoji: '🪴', label: 'Растение' }
-      ]
-    },
-    {
-      id: 'kitchen', label: 'Кухня', emoji: '🍳',
-      furniture: [
-        { id: 'table', emoji: '🍽️', label: 'Стол' },
-        { id: 'chair2', emoji: '🪑', label: 'Стул' },
-        { id: 'cupcake', emoji: '🧁', label: 'Кекс' },
-        { id: 'fruit', emoji: '🍎', label: 'Фрукты' },
-        { id: 'coffee', emoji: '☕', label: 'Чашка' },
-        { id: 'flower', emoji: '🌻', label: 'Цветок' },
-        { id: 'kettle', emoji: '🫖', label: 'Чайник' },
-        { id: 'basket', emoji: '🧺', label: 'Корзина' }
-      ]
+    /* Ближе к зрителю кадр «сужается» в сантиметрах — держим предмет в кадре. */
+    function limFor(fy, wcm) {
+      return Math.max(0, Math.min(HALF_CM, (W / 2) / pxAt(fy)) - wcm / 2);
     }
-  ];
 
-  /* ============================ STATE ============================ */
+    return { W: W, H: H, HALF_CM: HALF_CM, WALL_CM: WALL_CM, back: back,
+             wallY: wallY, pxAt: pxAt, xAt: xAt, yAt: yAt,
+             fyFromY: fyFromY, cmFromX: cmFromX, limFor: limFor };
+  })();
+
+  var EXT = { W: 1000, H: 690, ground: 470, houseBase: 512, houseScale: 1.18 };
+
+  function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
+  function uid() { return Math.random().toString(36).slice(2, 9) + Date.now().toString(36).slice(-4); }
+
+  /* ---------------------------------------------------------- состояние */
+
+  var KEY = 'dreamHouse.v2';
 
   var state = {
-    houses: loadHouses(),
-    currentHouseId: null,
-    editingRoomId: null,
-    exteriorTab: 'shape',
-    roomTab: 'furniture',
-    selectedItemUid: null
+    houses: load(),
+    houseId: null,
+    roomId: null,
+    extTab: 'style',
+    roomTab: 'items',
+    sel: null
   };
 
-  function loadHouses() {
-    try {
-      var raw = localStorage.getItem(STORAGE_KEY);
-      return raw ? JSON.parse(raw) : [];
-    } catch (e) {
-      return [];
-    }
+  function load() {
+    try { var raw = localStorage.getItem(KEY); return raw ? JSON.parse(raw) : []; }
+    catch (e) { return []; }
   }
-
-  function persistHouses() {
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(state.houses));
-    } catch (e) { /* storage unavailable, ignore */ }
+  function save() {
+    try { localStorage.setItem(KEY, JSON.stringify(state.houses)); } catch (e) {}
   }
-
-  function getCurrentHouse() {
-    var i;
-    for (i = 0; i < state.houses.length; i++) {
-      if (state.houses[i].id === state.currentHouseId) return state.houses[i];
+  function house() {
+    for (var i = 0; i < state.houses.length; i++) {
+      if (state.houses[i].id === state.houseId) return state.houses[i];
     }
     return null;
   }
-
-  function saveCurrent() {
-    persistHouses();
+  function findHouse(id) {
+    for (var i = 0; i < state.houses.length; i++) if (state.houses[i].id === id) return state.houses[i];
+    return null;
+  }
+  function room() { var h = house(); return h ? h.rooms[state.roomId] : null; }
+  function roomDef(id) {
+    for (var i = 0; i < A.ROOMS.length; i++) if (A.ROOMS[i].id === id) return A.ROOMS[i];
+    return null;
+  }
+  function mat(list, id) {
+    for (var i = 0; i < list.length; i++) if (list[i].id === id) return list[i];
+    return list[0];
   }
 
-  function uid() {
-    return Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
-  }
+  var DOOR_COLORS = ['#2F3336', '#7A4A32', '#2E6A57', '#8C3F35', '#D8D4CB', '#3A5573', '#A8802E', '#5B4A3C'];
+  var PATHS = [
+    { id: 'stone',  label: 'Плитка',  colors: ['#CDC8BE', '#B8B2A6'] },
+    { id: 'gravel', label: 'Гравий',  colors: ['#C4BCAA', '#ADA492'] },
+    { id: 'deck',   label: 'Дерево',  colors: ['#B08A5C', '#95714A'] },
+    { id: 'dark',   label: 'Бетон',   colors: ['#9C9A94', '#89877F'] }
+  ];
+  var LAWNS = ['#6E9B4E', '#5C8B45', '#84A85E', '#7E9668'];
 
-  function makeEmptyRoom() {
-    return { wallpaper: '#FFF6B0', floor: '#D9C7F0', items: [] };
-  }
-
-  function createHouse(name) {
-    var house = {
+  function newHouse(name) {
+    var h = {
       id: uid(),
       name: name || 'Дом мечты',
-      createdAt: Date.now(),
-      exterior: {
-        shape: 'cottage',
-        wall: '#FFE8B5',
-        roof: '#8B5E3C',
-        door: '#8B5E3C',
-        window: '#FFFFFF',
-        grass: '#8BC34A',
-        trees: 2,
-        flowers: true,
-        fence: false,
-        path: true
+      created: Date.now(),
+      ext: {
+        style: 'nordic', wall: 'plasterW', roof: 'seam',
+        door: '#2F3336', frame: '#EFEDE7',
+        time: 'day', lawn: 0, path: 'stone',
+        trees: 3, conifer: false, bushes: true, flowers: true, fence: false, lights: true
       },
-      rooms: {
-        living: makeEmptyRoom(),
-        bedroom: makeEmptyRoom(),
-        kitchen: makeEmptyRoom()
-      }
+      rooms: {}
     };
-    house.rooms.living.wallpaper = '#FFE8B5';
-    house.rooms.living.floor = '#8B5E3C';
-    house.rooms.bedroom.wallpaper = '#F8D7E3';
-    house.rooms.bedroom.floor = '#D9C7F0';
-    house.rooms.kitchen.wallpaper = '#D4F5C0';
-    house.rooms.kitchen.floor = '#FFF6B0';
-    return house;
+    A.ROOMS.forEach(function (r) {
+      h.rooms[r.id] = { wall: r.wall, floor: r.floor, mood: 'day', items: [] };
+    });
+    return h;
   }
 
-  /* ============================ SOUND ============================ */
+  /* ---------------------------------------------------------- звук */
 
-  var audioCtx = null;
-  function playPop(freq) {
+  var actx = null;
+  function tick(freq, vol) {
     try {
-      if (!audioCtx) {
-        var AC = window.AudioContext || window.webkitAudioContext;
-        if (!AC) return;
-        audioCtx = new AC();
-      }
-      if (audioCtx.state === 'suspended') audioCtx.resume();
-      var osc = audioCtx.createOscillator();
-      var gain = audioCtx.createGain();
-      osc.type = 'sine';
-      osc.frequency.value = freq || 660;
-      gain.gain.setValueAtTime(0.001, audioCtx.currentTime);
-      gain.gain.linearRampToValueAtTime(0.12, audioCtx.currentTime + 0.01);
-      gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.18);
-      osc.connect(gain);
-      gain.connect(audioCtx.destination);
-      osc.start();
-      osc.stop(audioCtx.currentTime + 0.2);
-    } catch (e) { /* ignore */ }
+      var AC = window.AudioContext || window.webkitAudioContext;
+      if (!AC) return;
+      if (!actx) actx = new AC();
+      if (actx.state === 'suspended') actx.resume();
+      var o = actx.createOscillator(), g = actx.createGain();
+      o.type = 'triangle';
+      o.frequency.value = freq || 520;
+      g.gain.setValueAtTime(0.0001, actx.currentTime);
+      g.gain.exponentialRampToValueAtTime(vol || 0.05, actx.currentTime + 0.008);
+      g.gain.exponentialRampToValueAtTime(0.0001, actx.currentTime + 0.11);
+      o.connect(g); g.connect(actx.destination);
+      o.start(); o.stop(actx.currentTime + 0.13);
+    } catch (e) {}
   }
 
-  var confirmYesHandler = null;
-  function showConfirm(message, onYes) {
-    document.getElementById('confirm-message').textContent = message;
-    document.getElementById('confirm-modal').hidden = false;
-    confirmYesHandler = onYes;
-  }
-  document.getElementById('confirm-yes').addEventListener('click', function () {
-    document.getElementById('confirm-modal').hidden = true;
-    if (confirmYesHandler) confirmYesHandler();
-    confirmYesHandler = null;
-  });
-  document.getElementById('confirm-no').addEventListener('click', function () {
-    document.getElementById('confirm-modal').hidden = true;
-    confirmYesHandler = null;
-  });
-
-  var toastTimer = null;
-  function showToast(msg) {
-    var t = document.getElementById('toast');
+  var toastT = null;
+  function toast(msg) {
+    var t = $('toast');
     t.textContent = msg;
     t.classList.add('show');
-    clearTimeout(toastTimer);
-    toastTimer = setTimeout(function () { t.classList.remove('show'); }, 1600);
+    clearTimeout(toastT);
+    toastT = setTimeout(function () { t.classList.remove('show'); }, 1900);
   }
 
-  /* ============================ NAVIGATION ============================ */
-
-  function showScreen(id) {
-    var screens = document.querySelectorAll('.screen');
-    screens.forEach(function (s) { s.classList.remove('active'); });
-    document.getElementById(id).classList.add('active');
-    window.scrollTo(0, 0);
+  var confirmCb = null;
+  function ask(title, text, label, cb) {
+    $('confirm-title').textContent = title;
+    $('confirm-text').textContent = text;
+    $('confirm-yes').textContent = label;
+    $('confirm').hidden = false;
+    confirmCb = cb;
   }
 
-  function goHome() {
-    state.currentHouseId = null;
-    renderHome();
-    showScreen('screen-home');
+  /* ==========================================================
+     ОБЩИЕ DEFS
+     ========================================================== */
+
+  function defs(p) {
+    return '<defs>' +
+      '<linearGradient id="screenGlow" x1="0" y1="0" x2="0.6" y2="1">' +
+        '<stop offset="0" stop-color="#FFFFFF" stop-opacity=".45"/>' +
+        '<stop offset="1" stop-color="#FFFFFF" stop-opacity="0"/></linearGradient>' +
+      '<linearGradient id="glassSheen" x1="0" y1="0" x2="0.7" y2="1">' +
+        '<stop offset="0" stop-color="#FFFFFF" stop-opacity=".38"/>' +
+        '<stop offset=".55" stop-color="#FFFFFF" stop-opacity=".05"/>' +
+        '<stop offset="1" stop-color="#FFFFFF" stop-opacity=".16"/></linearGradient>' +
+      '<pattern id="' + p + 'wgrain" width="7" height="7" patternUnits="userSpaceOnUse">' +
+        '<circle cx="1.5" cy="1.5" r="0.9" fill="#000" opacity=".05"/>' +
+        '<circle cx="5" cy="4" r="0.7" fill="#fff" opacity=".07"/>' +
+        '<circle cx="3" cy="6" r="0.6" fill="#000" opacity=".04"/></pattern>' +
+      '<radialGradient id="' + p + 'wvign" cx="0.5" cy="0.32" r="0.85">' +
+        '<stop offset="0" stop-color="#fff" stop-opacity=".10"/>' +
+        '<stop offset=".55" stop-color="#000" stop-opacity="0"/>' +
+        '<stop offset="1" stop-color="#000" stop-opacity=".16"/></radialGradient>' +
+      '<linearGradient id="' + p + 'fshade" x1="0" y1="0" x2="0" y2="1">' +
+        '<stop offset="0" stop-color="#000" stop-opacity=".20"/>' +
+        '<stop offset=".45" stop-color="#000" stop-opacity=".04"/>' +
+        '<stop offset="1" stop-color="#fff" stop-opacity=".07"/></linearGradient>' +
+      '<radialGradient id="' + p + 'lamp" cx="0.5" cy="0.5" r="0.5">' +
+        '<stop offset="0" stop-color="#FFD98A" stop-opacity=".62"/>' +
+        '<stop offset=".45" stop-color="#FFC96B" stop-opacity=".26"/>' +
+        '<stop offset="1" stop-color="#FFC96B" stop-opacity="0"/></radialGradient>' +
+      '<linearGradient id="' + p + 'facade" x1="0" y1="0" x2="1" y2="0.25">' +
+        '<stop offset="0" stop-color="#fff" stop-opacity=".14"/>' +
+        '<stop offset=".55" stop-color="#000" stop-opacity="0"/>' +
+        '<stop offset="1" stop-color="#000" stop-opacity=".18"/></linearGradient>' +
+      '<linearGradient id="' + p + 'roofShade" x1="0" y1="0" x2="0.3" y2="1">' +
+        '<stop offset="0" stop-color="#fff" stop-opacity=".12"/>' +
+        '<stop offset="1" stop-color="#000" stop-opacity=".22"/></linearGradient>' +
+      '</defs>';
   }
 
-  function goNameScreen() {
-    document.getElementById('house-name-input').value = '';
-    showScreen('screen-name');
-    setTimeout(function () {
-      document.getElementById('house-name-input').focus();
-    }, 200);
+  /* ==========================================================
+     РЕНДЕР КОМНАТЫ
+     ========================================================== */
+
+  function itemDef(id) { return A.FURNITURE[id]; }
+
+  function itemArt(it) {
+    var d = itemDef(it.id);
+    return d.draw(it.color || d.tint || null);
   }
 
-  function goExterior() {
-    state.exteriorTab = 'shape';
-    renderExteriorEditor();
-    showScreen('screen-exterior');
-  }
-
-  function goRooms() {
-    renderRoomsList();
-    showScreen('screen-rooms');
-  }
-
-  function goRoomEditor(roomId) {
-    state.editingRoomId = roomId;
-    state.roomTab = 'furniture';
-    state.selectedItemUid = null;
-    renderRoomEditor();
-    showScreen('screen-room');
-  }
-
-  function goFinal() {
-    renderFinal();
-    showScreen('screen-final');
-  }
-
-  /* ============================ EXTERIOR RENDER ============================ */
-
-  function houseShapeSvg(shapeId) {
-    if (shapeId === 'twostory') {
-      return (
-        '<svg viewBox="0 0 300 220">' +
-        '<rect class="chimney" x="196" y="30" width="16" height="40"/>' +
-        '<polygon class="roof" points="55,72 150,15 245,72"/>' +
-        '<rect class="wall" x="70" y="72" width="160" height="138"/>' +
-        '<rect class="window-frame" x="90" y="90" width="28" height="28" rx="3"/>' +
-        '<rect class="window-glass" x="94" y="94" width="20" height="20" rx="2"/>' +
-        '<rect class="window-frame" x="182" y="90" width="28" height="28" rx="3"/>' +
-        '<rect class="window-glass" x="186" y="94" width="20" height="20" rx="2"/>' +
-        '<rect class="window-frame" x="90" y="132" width="28" height="28" rx="3"/>' +
-        '<rect class="window-glass" x="94" y="136" width="20" height="20" rx="2"/>' +
-        '<rect class="window-frame" x="182" y="132" width="28" height="28" rx="3"/>' +
-        '<rect class="window-glass" x="186" y="136" width="20" height="20" rx="2"/>' +
-        '<rect class="door" x="134" y="160" width="32" height="50" rx="4"/>' +
-        '<circle class="door-knob" cx="158" cy="187" r="2.5"/>' +
-        '</svg>'
-      );
+  /** Экранная рамка предмета: {x,y,w,h} в координатах вьюбокса. */
+  function itemBox(it) {
+    var d = itemDef(it.id);
+    var s = it.scale || 1;
+    if (d.cat === 'wall') {
+      var pw = d.w * ROOM.back * s, ph = d.h * ROOM.back * s;
+      var cx = ROOM.xAt(it.x, 0), cy = (it.wy || 0.4) * ROOM.wallY;
+      return { x: cx - pw / 2, y: cy - ph / 2, w: pw, h: ph, px: ROOM.back * s };
     }
-    if (shapeId === 'bungalow') {
-      return (
-        '<svg viewBox="0 0 300 220">' +
-        '<rect class="chimney" x="208" y="88" width="14" height="34"/>' +
-        '<polygon class="roof" points="42,132 100,86 200,86 258,132"/>' +
-        '<rect class="wall" x="55" y="132" width="190" height="78"/>' +
-        '<rect class="window-frame" x="78" y="150" width="32" height="30" rx="3"/>' +
-        '<rect class="window-glass" x="82" y="154" width="24" height="22" rx="2"/>' +
-        '<rect class="window-frame" x="190" y="150" width="32" height="30" rx="3"/>' +
-        '<rect class="window-glass" x="194" y="154" width="24" height="22" rx="2"/>' +
-        '<rect class="door" x="138" y="160" width="30" height="50" rx="4"/>' +
-        '<circle class="door-knob" cx="160" cy="187" r="2.5"/>' +
-        '</svg>'
-      );
+    var k = ROOM.pxAt(it.fy) * s;
+    if (d.cat === 'rug') {
+      var rw = d.w * k, rh = d.h * k * 0.26;   /* лежит на полу — сильное сжатие по высоте */
+      return { x: ROOM.xAt(it.x, it.fy) - rw / 2, y: ROOM.yAt(it.fy) - rh, w: rw, h: rh, px: k, flat: true };
     }
-    /* cottage (default) */
-    return (
-      '<svg viewBox="0 0 300 220">' +
-      '<rect class="chimney" x="188" y="72" width="16" height="38"/>' +
-      '<polygon class="roof" points="62,120 150,58 238,120"/>' +
-      '<rect class="wall" x="75" y="120" width="150" height="90"/>' +
-      '<rect class="window-frame" x="95" y="140" width="30" height="30" rx="3"/>' +
-      '<rect class="window-glass" x="99" y="144" width="22" height="22" rx="2"/>' +
-      '<rect class="window-frame" x="175" y="140" width="30" height="30" rx="3"/>' +
-      '<rect class="window-glass" x="179" y="144" width="22" height="22" rx="2"/>' +
-      '<rect class="door" x="135" y="160" width="30" height="50" rx="4"/>' +
-      '<circle class="door-knob" cx="158" cy="187" r="2.5"/>' +
-      '</svg>'
-    );
+    var w = d.w * k, h = d.h * k;
+    return { x: ROOM.xAt(it.x, it.fy) - w / 2, y: ROOM.yAt(it.fy) - h, w: w, h: h, px: k };
   }
 
-  function renderExteriorInto(container, ext, opts) {
+  function drawItem(it, selected) {
+    var d = itemDef(it.id);
+    var b = itemBox(it);
+    var out = '';
+
+    /* контактная тень — предмет должен «стоять»; ковёр лежит, ему тень не нужна */
+    if (d.cat === 'floor') {
+      var sw = b.w * 0.52, sy = b.y + b.h;
+      out += '<ellipse cx="' + (b.x + b.w / 2).toFixed(1) + '" cy="' + sy.toFixed(1) +
+        '" rx="' + sw.toFixed(1) + '" ry="' + Math.max(3, b.w * 0.055).toFixed(1) +
+        '" fill="#000" opacity=".15"/>';
+    } else if (d.cat === 'wall') {
+      out += '<rect x="' + (b.x + b.w * 0.06).toFixed(1) + '" y="' + (b.y + b.h * 0.06).toFixed(1) +
+        '" width="' + b.w.toFixed(1) + '" height="' + b.h.toFixed(1) + '" fill="#000" opacity=".10"/>';
+    }
+
+    var sx = it.flip ? -1 : 1;
+    var scaleY = b.flat ? (b.h / d.h) : (b.w / d.w);
+    var tx = b.x + (it.flip ? b.w : 0);
+    out += '<g class="obj' + (selected ? ' is-selected' : '') + '" data-uid="' + it.uid + '"' +
+      ' transform="translate(' + tx.toFixed(2) + ' ' + b.y.toFixed(2) + ') scale(' +
+      (sx * b.w / d.w).toFixed(4) + ' ' + scaleY.toFixed(4) + ')">' +
+      itemArt(it) + '</g>';
+
+    if (selected) {
+      var pad = 7;
+      out += '<rect class="sel-ring" pointer-events="none" x="' + (b.x - pad).toFixed(1) + '" y="' + (b.y - pad).toFixed(1) +
+        '" width="' + (b.w + pad * 2).toFixed(1) + '" height="' + (b.h + pad * 2).toFixed(1) + '" rx="10"/>';
+    }
+    return out;
+  }
+
+  function glowFor(it, p) {
+    var d = itemDef(it.id);
+    if (!d.glow) return '';
+    var b = itemBox(it);
+    var k = b.w / d.w;
+    var gx = b.x + d.glow.x * k * (it.flip ? -1 : 1) + (it.flip ? b.w : 0);
+    var gy = b.y + d.glow.y * (b.flat ? b.h / d.h : k);
+    var r = d.glow.r * k;
+    return '<ellipse cx="' + gx.toFixed(1) + '" cy="' + gy.toFixed(1) + '" rx="' + r.toFixed(1) +
+      '" ry="' + r.toFixed(1) + '" fill="url(#' + p + 'lamp)" pointer-events="none"/>';
+  }
+
+  function renderRoom(r, opts) {
+    opts = opts || {};
+    var p = opts.p || ('r' + Math.random().toString(36).slice(2, 7) + '_');
+    var wm = mat(A.WALL_MATERIALS, r.wall);
+    var fm = mat(A.FLOOR_MATERIALS, r.floor);
+    var geo = { W: ROOM.W, H: ROOM.H, wallY: ROOM.wallY, xAt: ROOM.xAt, yAt: ROOM.yAt };
+
+    var out = '<svg viewBox="0 0 ' + ROOM.W + ' ' + ROOM.H + '" preserveAspectRatio="xMidYMid slice">';
+    out += defs(p);
+
+    /* стена + плинтус + пол */
+    out += A.renderWall(wm, 0, 0, ROOM.W, ROOM.wallY, p);
+    out += A.renderFloor(fm, geo, p);
+    out += '<rect x="0" y="' + (ROOM.wallY - 11).toFixed(1) + '" width="' + ROOM.W +
+      '" height="11" fill="' + A.sh(wm.color, A.lum(wm.color) > 0.5 ? -0.08 : 0.16) + '"/>';
+    out += '<rect x="0" y="' + (ROOM.wallY - 11).toFixed(1) + '" width="' + ROOM.W +
+      '" height="3" fill="#000" opacity=".10"/>';
+
+    /* порядок: ковры → настенное → напольное по глубине */
+    var rugs = [], walls = [], floors = [];
+    r.items.forEach(function (it) {
+      var d = itemDef(it.id);
+      if (!d) return;
+      if (d.cat === 'rug') rugs.push(it);
+      else if (d.cat === 'wall') walls.push(it);
+      else floors.push(it);
+    });
+    rugs.sort(function (a, b) { return a.fy - b.fy; });
+    floors.sort(function (a, b) { return a.fy - b.fy; });
+
+    var sel = opts.sel;
+    rugs.concat(walls, floors).forEach(function (it) {
+      out += drawItem(it, it.uid === sel);
+    });
+
+    /* вечер: приглушаем свет и зажигаем лампы */
+    if (r.mood === 'evening') {
+      out += '<rect x="0" y="0" width="' + ROOM.W + '" height="' + ROOM.H +
+        '" fill="#101A2E" opacity=".46" pointer-events="none"/>';
+      r.items.forEach(function (it) { out += glowFor(it, p); });
+      out += '<rect x="0" y="0" width="' + ROOM.W + '" height="' + ROOM.H +
+        '" fill="#FFC96B" opacity=".07" pointer-events="none"/>';
+    }
+
+    out += '</svg>';
+    return out;
+  }
+
+  /* ==========================================================
+     РЕНДЕР ЭКСТЕРЬЕРА
+     ========================================================== */
+
+  function renderExterior(e, opts) {
     opts = opts || {};
     var mini = !!opts.mini;
-    var yardHtml = '';
+    var p = opts.p || ('e' + Math.random().toString(36).slice(2, 7) + '_');
+    var W = EXT.W, H = EXT.H, G = EXT.ground;
+    var t = mat(A.TIMES, e.time);
+    var wm = mat(A.EXT_WALL, e.wall);
+    var rm = mat(A.EXT_ROOF, e.roof);
+    var style = A.HOUSE_STYLES.filter(function (s) { return s.id === e.style; })[0] || A.HOUSE_STYLES[0];
+    var lawn = LAWNS[e.lawn || 0];
+    var pathM = PATHS.filter(function (x) { return x.id === e.path; })[0] || PATHS[0];
+    var night = e.time === 'night';
+
+    var out = '<svg viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="xMidYMid slice">';
+    out += defs(p);
+    out += '<defs><linearGradient id="' + p + 'sky" x1="0" y1="0" x2="0" y2="1">' +
+      '<stop offset="0" stop-color="' + t.sky[0] + '"/>' +
+      '<stop offset="1" stop-color="' + t.sky[1] + '"/></linearGradient>' +
+      '<radialGradient id="' + p + 'sun" cx="0.5" cy="0.5" r="0.5">' +
+      '<stop offset="0" stop-color="' + t.sun + '" stop-opacity=".95"/>' +
+      '<stop offset=".4" stop-color="' + t.sun + '" stop-opacity=".35"/>' +
+      '<stop offset="1" stop-color="' + t.sun + '" stop-opacity="0"/></radialGradient>' +
+      '<linearGradient id="' + p + 'lawn" x1="0" y1="0" x2="0" y2="1">' +
+      '<stop offset="0" stop-color="' + A.sh(lawn, -0.22) + '"/>' +
+      '<stop offset=".35" stop-color="' + lawn + '"/>' +
+      '<stop offset="1" stop-color="' + A.sh(lawn, 0.12) + '"/></linearGradient></defs>';
+
+    /* стили окон и двери */
+    out += '<style>' +
+      '.glass{fill:' + t.glass + '}' +
+      '.frame{fill:' + e.frame + '}' +
+      '.frameLine{stroke:' + e.frame + ';stroke-width:4}' +
+      '.frameStroke{color:' + e.frame + '}' +
+      '.door{fill:' + e.door + '}' +
+      '.doorPanel{fill:' + A.sh(e.door, A.lum(e.door) > 0.5 ? -0.1 : 0.14) + '}' +
+      '</style>';
+
+    /* --- небо --- */
+    out += '<rect x="0" y="0" width="' + W + '" height="' + G + '" fill="url(#' + p + 'sky)"/>';
+    if (night && !mini) {
+      for (var s = 0; s < 34; s++) {
+        var sx = (s * 173) % W, sy = (s * 97) % (G - 120);
+        out += '<circle cx="' + sx + '" cy="' + sy + '" r="' + (s % 3 === 0 ? 1.8 : 1.1) +
+          '" fill="#fff" opacity="' + (0.35 + (s % 5) * 0.12) + '"/>';
+      }
+    }
+    var sunX = night ? 178 : (e.time === 'sunset' ? 812 : 806);
+    var sunY = night ? 96 : (e.time === 'sunset' ? 300 : 106);
+    out += '<circle cx="' + sunX + '" cy="' + sunY + '" r="120" fill="url(#' + p + 'sun)"/>';
+    if (night) {
+      out += '<circle cx="' + sunX + '" cy="' + sunY + '" r="34" fill="#E8EEF8"/>';
+      out += '<circle cx="' + (sunX - 13) + '" cy="' + (sunY - 9) + '" r="30" fill="' + t.sky[0] + '"/>';
+    } else {
+      out += '<circle cx="' + sunX + '" cy="' + sunY + '" r="' + (e.time === 'sunset' ? 46 : 34) +
+        '" fill="' + t.sun + '"/>';
+    }
+    if (!mini && !night) {
+      out += '<g fill="#FFFFFF" opacity="' + (e.time === 'sunset' ? 0.55 : 0.8) + '">' +
+        '<ellipse cx="196" cy="118" rx="62" ry="24"/><ellipse cx="246" cy="106" rx="46" ry="27"/>' +
+        '<ellipse cx="150" cy="126" rx="40" ry="18"/>' +
+        '<ellipse cx="614" cy="72" rx="48" ry="18"/><ellipse cx="652" cy="64" rx="34" ry="20"/>' +
+        '</g>';
+    }
+
+    /* --- дальний лес --- */
+    var forest = '';
+    for (var i = 0; i < 26; i++) {
+      var fx = i * 42 - 10;
+      var fh = 46 + ((i * 37) % 40);
+      forest += '<path d="M' + fx + ' ' + G + ' L' + (fx + 21) + ' ' + (G - fh) + ' L' + (fx + 42) + ' ' + G + ' Z"/>';
+    }
+    out += '<g fill="' + A.sh(night ? '#1B2E3A' : '#4C6B4F', night ? 0 : -0.28) + '" opacity=".9">' + forest + '</g>';
+    out += '<rect x="0" y="' + (G - 4) + '" width="' + W + '" height="8" fill="' + A.sh(lawn, -0.3) + '"/>';
+
+    /* --- газон --- */
+    out += '<rect x="0" y="' + G + '" width="' + W + '" height="' + (H - G) + '" fill="url(#' + p + 'lawn)"/>';
     if (!mini) {
-      var decor = '';
-      var i, leftPositions = [8, 20], rightPositions = [78, 90];
-      for (i = 0; i < ext.trees; i++) {
-        var pos = i < 2 ? (i === 0 ? 6 : 88) : 46;
-        decor += '<span class="yard-emoji" style="left:' + pos + '%; font-size:' + (30 - i * 2) + 'px;">🌳</span>';
+      out += '<g fill="#000" opacity=".05">';
+      var yy = G, band = 12;
+      while (yy < H) {
+        out += '<rect x="0" y="' + yy.toFixed(1) + '" width="' + W + '" height="' + (band / 2).toFixed(1) + '"/>';
+        yy += band; band *= 1.22;
       }
-      if (ext.flowers) {
-        decor += '<span class="yard-emoji" style="left:30%; font-size:16px;">🌸</span>';
-        decor += '<span class="yard-emoji" style="left:64%; font-size:16px;">🌼</span>';
+      out += '</g>';
+    }
+
+    /* --- дом --- */
+    var hs = EXT.houseScale, hw = 460 * hs;
+    var hx = (W - hw) / 2, hy = EXT.houseBase - 300 * hs;
+    out += '<g transform="translate(' + hx.toFixed(1) + ' ' + hy.toFixed(1) + ') scale(' + hs + ')">';
+    out += style.draw(wm, rm, p);
+    out += '</g>';
+    /* тень дома на газоне */
+    out += '<ellipse cx="' + (W / 2 + 30) + '" cy="' + (EXT.houseBase + 4) + '" rx="' + (hw * 0.46) +
+      '" ry="16" fill="#000" opacity=".16"/>';
+
+    /* --- дорожка от двери --- */
+    var px0 = W / 2, doorW = 60;
+    out += '<polygon points="' + (px0 - doorW / 2) + ',' + EXT.houseBase + ' ' + (px0 + doorW / 2) + ',' + EXT.houseBase +
+      ' ' + (px0 + doorW * 1.9) + ',' + H + ' ' + (px0 - doorW * 1.9) + ',' + H +
+      '" fill="' + pathM.colors[0] + '"/>';
+    if (!mini) {
+      var rowY = EXT.houseBase, gap = 9;
+      out += '<g stroke="' + pathM.colors[1] + '" stroke-width="2.4">';
+      while (rowY < H) {
+        var f = (rowY - EXT.houseBase) / (H - EXT.houseBase);
+        var halfW = doorW / 2 + (doorW * 1.9 - doorW / 2) * f;
+        out += '<line x1="' + (px0 - halfW).toFixed(1) + '" y1="' + rowY.toFixed(1) +
+          '" x2="' + (px0 + halfW).toFixed(1) + '" y2="' + rowY.toFixed(1) + '"/>';
+        rowY += gap; gap *= 1.24;
       }
-      if (ext.fence) {
-        decor += '<span class="yard-emoji" style="left:2%; bottom:0; font-size:18px;">🪵</span>';
-        decor += '<span class="yard-emoji" style="left:96%; bottom:0; font-size:18px;">🪵</span>';
+      if (e.path === 'deck') {
+        out += '<line x1="' + px0 + '" y1="' + EXT.houseBase + '" x2="' + px0 + '" y2="' + H + '"/>';
       }
-      yardHtml = '<div class="exterior-yard-decor">' + decor + '</div>';
+      out += '</g>';
     }
-    var pathHtml = (!mini && ext.path) ? '<div class="exterior-path"></div>' : '';
-    var cloudsHtml = mini ? '' :
-      '<span class="exterior-cloud" style="top:10px; left:12px;">☁️</span>' +
-      '<span class="exterior-cloud" style="top:26px; right:20px;">☁️</span>';
 
-    container.innerHTML =
-      '<div class="exterior-render' + (mini ? ' mini' : '') + '" style="' +
-        '--wall-color:' + ext.wall + ';' +
-        '--roof-color:' + ext.roof + ';' +
-        '--door-color:' + ext.door + ';' +
-        '--window-color:' + ext.window + ';' +
-        '--grass-color:' + ext.grass + ';">' +
-        '<div class="exterior-sky"></div>' +
-        (mini ? '' : '<span class="exterior-sun">☀️</span>') +
-        cloudsHtml +
-        '<div class="exterior-svg-wrap">' + houseShapeSvg(ext.shape) + '</div>' +
-        '<div class="exterior-ground">' + pathHtml + '</div>' +
-        yardHtml +
-      '</div>';
-  }
-
-  function renderExteriorEditor() {
-    var house = getCurrentHouse();
-    if (!house) return;
-    renderExteriorInto(document.getElementById('exterior-preview'), house.exterior);
-
-    document.querySelectorAll('#exterior-tabs .tab-btn').forEach(function (btn) {
-      btn.classList.toggle('active', btn.dataset.tab === state.exteriorTab);
-    });
-
-    var panel = document.getElementById('exterior-panel');
-    var ext = house.exterior;
-    var html = '';
-
-    if (state.exteriorTab === 'shape') {
-      html += '<div class="shape-grid">';
-      HOUSE_SHAPES.forEach(function (s) {
-        html += '<button class="option-card' + (ext.shape === s.id ? ' active' : '') + '" data-shape="' + s.id + '">' +
-          '<span class="opt-emoji">' + s.emoji + '</span>' + s.label + '</button>';
-      });
-      html += '</div>';
-    } else if (state.exteriorTab === 'wall' || state.exteriorTab === 'roof' || state.exteriorTab === 'door' || state.exteriorTab === 'window') {
-      html += swatchGridHtml(ext[state.exteriorTab], state.exteriorTab);
-    } else if (state.exteriorTab === 'yard') {
-      html += '<div class="swatch-grid">' + swatchesOnly(ext.grass, 'grass') + '</div>';
-      html += '<div class="stepper"><button data-act="tree-minus">−</button>' +
-        '<span class="stepper-val">🌳 ' + ext.trees + '</span>' +
-        '<button data-act="tree-plus">+</button></div>';
-      html += toggleRowHtml('flowers', '🌸 Цветы', ext.flowers);
-      html += toggleRowHtml('fence', '🪵 Забор', ext.fence);
-      html += toggleRowHtml('path', '🪨 Дорожка', ext.path);
+    /* --- озеленение --- */
+    var n = e.trees || 0;
+    var slots = [[92, 0.98], [908, 1.05], [196, 0.74], [812, 0.8], [40, 0.62]];
+    for (var k = 0; k < n && k < slots.length; k++) {
+      var sp = slots[k];
+      var gy = EXT.houseBase + (k >= 2 ? 26 : 8) + (k === 4 ? 34 : 0);
+      out += '<ellipse cx="' + sp[0] + '" cy="' + (gy + 2) + '" rx="' + (34 * sp[1]) + '" ry="9" fill="#000" opacity=".14"/>';
+      out += e.conifer
+        ? A.treeConifer(sp[0], gy, sp[1], night ? -0.3 : 0)
+        : A.treeDeciduous(sp[0], gy, sp[1], night ? -0.3 : 0);
     }
-    panel.innerHTML = html;
-  }
-
-  function swatchesOnly(current, field) {
-    var html = '';
-    COLOR_PALETTE.forEach(function (c) {
-      html += '<button class="swatch' + (sameColor(c, current) ? ' active' : '') + '" ' +
-        'style="background:' + c + '" data-field="' + field + '" data-color="' + c + '"></button>';
-    });
-    html += '<label class="swatch swatch-custom" title="Свой цвет">🎨' +
-      '<input type="color" data-field="' + field + '" data-custom="1" value="' + current + '"></label>';
-    return html;
-  }
-
-  function swatchGridHtml(current, field) {
-    return '<div class="swatch-grid">' + swatchesOnly(current, field) + '</div>';
-  }
-
-  function toggleRowHtml(field, label, on) {
-    return '<div class="toggle-row"><span>' + label + '</span>' +
-      '<button class="switch' + (on ? ' on' : '') + '" data-toggle="' + field + '"></button></div>';
-  }
-
-  function sameColor(a, b) {
-    return (a || '').toLowerCase() === (b || '').toLowerCase();
-  }
-
-  /* ============================ ROOMS LIST ============================ */
-
-  function renderRoomsList() {
-    var house = getCurrentHouse();
-    if (!house) return;
-    var wrap = document.getElementById('room-cards');
-    var html = '';
-    ROOM_TYPES.forEach(function (rt) {
-      var room = house.rooms[rt.id];
-      html += '<button class="room-card" data-room="' + rt.id + '">' +
-        '<span class="room-card-icon">' + rt.emoji + '</span>' +
-        '<span class="room-card-name">' + rt.label + '</span>' +
-        '<span class="room-card-count">' + room.items.length + ' 🪑</span>' +
-        '</button>';
-    });
-    wrap.innerHTML = html;
-  }
-
-  /* ============================ ROOM EDITOR ============================ */
-
-  function roomTypeById(id) {
-    var i;
-    for (i = 0; i < ROOM_TYPES.length; i++) {
-      if (ROOM_TYPES[i].id === id) return ROOM_TYPES[i];
-    }
-    return null;
-  }
-
-  function renderRoomVisual(container, room, roomType, opts) {
-    opts = opts || {};
-    var interactive = !!opts.interactive;
-    var html = '<div class="room-wall" style="background:' + room.wallpaper + '"></div>' +
-      '<div class="room-floor" style="background:' + room.floor + '"></div>';
-    room.items.forEach(function (item) {
-      var scale = item.scale || 1;
-      var flip = item.flip ? -1 : 1;
-      html += '<div class="room-item' + (interactive && item.uid === state.selectedItemUid ? ' selected' : '') + '" ' +
-        'data-uid="' + item.uid + '" style="left:' + item.x + '%; top:' + item.y + '%; ' +
-        'font-size:' + (opts.baseSize || 40) * scale + 'px; ' +
-        'transform:translate(-50%,-50%) scaleX(' + flip + ');">' + item.emoji + '</div>';
-    });
-    container.innerHTML = html;
-
-    if (interactive) {
-      container.querySelectorAll('.room-item').forEach(function (el) {
-        el.addEventListener('pointerdown', function (ev) {
-          onItemPointerDown(ev, el, container);
-        });
+    if (e.bushes) {
+      [[318, 0.9], [682, 0.95], [252, 0.7], [748, 0.72]].forEach(function (b) {
+        out += A.bush(b[0], EXT.houseBase + 6, b[1]);
       });
     }
-  }
-
-  function renderRoomEditor() {
-    var house = getCurrentHouse();
-    if (!house) return;
-    var roomId = state.editingRoomId;
-    var roomType = roomTypeById(roomId);
-    var room = house.rooms[roomId];
-
-    document.getElementById('room-title').textContent = roomType.emoji + ' ' + roomType.label;
-
-    var canvas = document.getElementById('room-canvas');
-    renderRoomVisual(canvas, room, roomType, { interactive: true, baseSize: 40 });
-
-    document.getElementById('item-toolbar').hidden = !state.selectedItemUid;
-
-    document.querySelectorAll('#room-tabs .tab-btn').forEach(function (btn) {
-      btn.classList.toggle('active', btn.dataset.tab === state.roomTab);
-    });
-
-    var panel = document.getElementById('room-panel');
-    var html = '';
-    if (state.roomTab === 'furniture') {
-      html += '<div class="furniture-tray">';
-      roomType.furniture.forEach(function (f) {
-        html += '<button class="furniture-btn" data-add="' + f.id + '">' +
-          '<span class="f-emoji">' + f.emoji + '</span><span class="f-label">' + f.label + '</span></button>';
+    if (e.flowers && !mini) {
+      var fl = ['#E4737F', '#F0C64E', '#C77FD0', '#EE9A4B'];
+      for (var q = 0; q < 22; q++) {
+        var fx2 = 60 + (q * 173) % 880;
+        var fy2 = EXT.houseBase + 24 + (q * 61) % 130;
+        if (Math.abs(fx2 - W / 2) < 130) continue;
+        out += '<circle cx="' + fx2 + '" cy="' + fy2 + '" r="4.4" fill="' + fl[q % 4] + '"/>';
+        out += '<circle cx="' + fx2 + '" cy="' + fy2 + '" r="1.6" fill="#FFF3CB"/>';
+      }
+    }
+    if (e.fence) {
+      out += '<g>';
+      [[-10, 250], [750, 1010]].forEach(function (seg) {
+        out += '<rect x="' + seg[0] + '" y="' + (EXT.houseBase - 44) + '" width="' + (seg[1] - seg[0]) +
+          '" height="7" rx="3" fill="#8C7355"/>';
+        out += '<rect x="' + seg[0] + '" y="' + (EXT.houseBase - 24) + '" width="' + (seg[1] - seg[0]) +
+          '" height="7" rx="3" fill="#8C7355"/>';
+        for (var fx3 = seg[0] + 6; fx3 < seg[1]; fx3 += 26) {
+          out += '<rect x="' + fx3 + '" y="' + (EXT.houseBase - 56) + '" width="9" height="60" rx="3" fill="#9C8262"/>';
+        }
       });
-      html += '</div>';
-    } else if (state.roomTab === 'wallpaper') {
-      html += swatchGridHtml(room.wallpaper, 'wallpaper');
-    } else if (state.roomTab === 'floor') {
-      html += swatchGridHtml(room.floor, 'floor');
+      out += '</g>';
     }
-    panel.innerHTML = html;
-  }
-
-  function onItemPointerDown(ev, el, container) {
-    ev.preventDefault();
-    state.selectedItemUid = el.dataset.uid;
-    document.querySelectorAll('.room-item').forEach(function (n) { n.classList.remove('selected'); });
-    el.classList.add('selected');
-    document.getElementById('item-toolbar').hidden = false;
-
-    var house = getCurrentHouse();
-    var room = house.rooms[state.editingRoomId];
-    var item = findItem(room, state.selectedItemUid);
-    if (!item) return;
-
-    var rect = container.getBoundingClientRect();
-    var moved = false;
-
-    function onMove(mv) {
-      moved = true;
-      var x = ((mv.clientX - rect.left) / rect.width) * 100;
-      var y = ((mv.clientY - rect.top) / rect.height) * 100;
-      x = Math.max(3, Math.min(97, x));
-      y = Math.max(3, Math.min(97, y));
-      item.x = x;
-      item.y = y;
-      el.style.left = x + '%';
-      el.style.top = y + '%';
+    if (e.lights) {
+      [[px0 - 118, EXT.houseBase + 40], [px0 + 118, EXT.houseBase + 40],
+       [px0 - 168, EXT.houseBase + 108], [px0 + 168, EXT.houseBase + 108]].forEach(function (L) {
+        out += '<rect x="' + (L[0] - 2.5) + '" y="' + (L[1] - 26) + '" width="5" height="26" fill="#4A4E52"/>';
+        out += '<path d="M' + (L[0] - 9) + ' ' + (L[1] - 26) + ' h18 l-4 -10 h-10 z" fill="#5B6165"/>';
+        if (night) {
+          out += '<ellipse cx="' + L[0] + '" cy="' + (L[1] + 6) + '" rx="46" ry="18" fill="url(#' + p + 'lamp)"/>';
+        }
+      });
     }
-    function onUp() {
-      document.removeEventListener('pointermove', onMove);
-      document.removeEventListener('pointerup', onUp);
-      if (moved) saveCurrent();
+
+    /* --- свет из окон и общий тон времени суток --- */
+    if (night && style.lights) {
+      style.lights.forEach(function (L) {
+        out += '<ellipse cx="' + (hx + L[0] * hs).toFixed(1) + '" cy="' + (hy + L[1] * hs).toFixed(1) +
+          '" rx="' + (L[2] * hs).toFixed(1) + '" ry="' + (L[2] * hs * 0.8).toFixed(1) +
+          '" fill="url(#' + p + 'lamp)" pointer-events="none"/>';
+      });
     }
-    document.addEventListener('pointermove', onMove);
-    document.addEventListener('pointerup', onUp);
-  }
-
-  function findItem(room, itemUid) {
-    var i;
-    for (i = 0; i < room.items.length; i++) {
-      if (room.items[i].uid === itemUid) return room.items[i];
+    if (t.amb !== 'rgba(0,0,0,0)') {
+      out += '<rect x="0" y="0" width="' + W + '" height="' + H + '" fill="' + t.amb + '" pointer-events="none"/>';
     }
-    return null;
+
+    out += '</svg>';
+    return out;
   }
 
-  /* ============================ FINAL SCREEN ============================ */
+  /* ==========================================================
+     ЭКРАНЫ
+     ========================================================== */
 
-  function renderFinal() {
-    var house = getCurrentHouse();
-    if (!house) return;
-    document.getElementById('final-title').textContent = '🏡 ' + house.name;
-    renderExteriorInto(document.getElementById('final-exterior'), house.exterior);
-
-    var wrap = document.getElementById('final-rooms');
-    wrap.innerHTML = '';
-    ROOM_TYPES.forEach(function (rt) {
-      var block = document.createElement('div');
-      block.className = 'final-room-block';
-      var label = document.createElement('div');
-      label.className = 'final-room-label';
-      label.textContent = rt.emoji + ' ' + rt.label;
-      block.appendChild(label);
-      var canvas = document.createElement('div');
-      canvas.className = 'final-room-canvas';
-      block.appendChild(canvas);
-      canvas.addEventListener('click', function () { goRoomEditor(rt.id); });
-      wrap.appendChild(block);
-      renderRoomVisual(canvas, house.rooms[rt.id], rt, { interactive: false, baseSize: 24 });
-    });
+  function show(id) {
+    var list = document.querySelectorAll('.screen');
+    for (var i = 0; i < list.length; i++) list[i].classList.remove('active');
+    $(id).classList.add('active');
+    var panels = document.querySelectorAll('.panel, .house-list, .room-grid, .summary');
+    for (var j = 0; j < panels.length; j++) panels[j].scrollTop = 0;
   }
 
-  /* ============================ HOME SCREEN ============================ */
-
-  function formatDate(ts) {
-    var d = new Date(ts);
-    var dd = String(d.getDate()).padStart(2, '0');
-    var mm = String(d.getMonth() + 1).padStart(2, '0');
-    return dd + '.' + mm + '.' + d.getFullYear();
+  function countItems(h) {
+    var n = 0;
+    for (var k in h.rooms) if (h.rooms.hasOwnProperty(k)) n += h.rooms[k].items.length;
+    return n;
   }
+
+  function plural(n, one, few, many) {
+    var a = Math.abs(n) % 100, b = a % 10;
+    if (a > 10 && a < 20) return many;
+    if (b > 1 && b < 5) return few;
+    if (b === 1) return one;
+    return many;
+  }
+
+  /* ---------------------------------------------------------- главная */
 
   function renderHome() {
-    var wrap = document.getElementById('house-list');
+    var wrap = $('house-list');
     if (!state.houses.length) {
-      wrap.innerHTML = '<div class="house-empty">Пока нет домов.<br>Нажми «Новый дом», чтобы построить первый! 🏡✨</div>';
+      wrap.innerHTML = '<div class="empty"><strong>Пока пусто</strong>' +
+        'Создай первый проект — выбери форму дома, материалы и обставь комнаты.</div>';
       return;
     }
-    var sorted = state.houses.slice().sort(function (a, b) { return b.createdAt - a.createdAt; });
+    var list = state.houses.slice().sort(function (a, b) { return b.created - a.created; });
     var html = '';
-    sorted.forEach(function (h) {
-      html += '<div class="house-card" data-open="' + h.id + '">' +
-        '<div class="house-card-thumb" data-thumb="' + h.id + '"></div>' +
-        '<div class="house-card-info">' +
-          '<div class="house-card-name">' + escapeHtml(h.name) + '</div>' +
-          '<div class="house-card-date">' + formatDate(h.createdAt) + '</div>' +
-        '</div>' +
-        '<div class="house-card-actions">' +
-          '<button class="icon-btn" data-view="' + h.id + '" title="Смотреть">👀</button>' +
-          '<button class="icon-btn" data-delete="' + h.id + '" title="Удалить">🗑️</button>' +
-        '</div>' +
+    list.forEach(function (h) {
+      var n = countItems(h);
+      html += '<div class="house-card">' +
+        '<button class="house-thumb" data-open="' + h.id + '" aria-label="Открыть ' + esc(h.name) + '"></button>' +
+        '<button class="house-meta" data-open="' + h.id + '">' +
+          '<span class="house-name">' + esc(h.name) + '</span>' +
+          '<span class="house-facts"><span>' + fmtDate(h.created) + '</span><span>' +
+            n + ' ' + plural(n, 'предмет', 'предмета', 'предметов') + '</span></span>' +
+        '</button>' +
+        '<span class="house-actions">' +
+          '<button class="iconbtn" data-view="' + h.id + '" aria-label="Посмотреть">' + A.icon('eye') + '</button>' +
+          '<button class="iconbtn danger" data-del="' + h.id + '" aria-label="Удалить">' + A.icon('trash') + '</button>' +
+        '</span>' +
       '</div>';
     });
     wrap.innerHTML = html;
-    wrap.querySelectorAll('[data-thumb]').forEach(function (el) {
-      var h = findHouse(el.dataset.thumb);
-      if (h) renderExteriorInto(el, h.exterior, { mini: true });
-    });
-  }
-
-  function escapeHtml(s) {
-    var div = document.createElement('div');
-    div.textContent = s;
-    return div.innerHTML;
-  }
-
-  function findHouse(id) {
-    var i;
-    for (i = 0; i < state.houses.length; i++) {
-      if (state.houses[i].id === id) return state.houses[i];
+    var thumbs = wrap.querySelectorAll('.house-thumb');
+    for (var i = 0; i < thumbs.length; i++) {
+      var h = findHouse(thumbs[i].dataset.open);
+      if (h) thumbs[i].innerHTML = renderExterior(h.ext, { mini: true, p: 't' + i + '_' });
     }
+  }
+
+  function esc(s) { var d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+  function fmtDate(ts) {
+    var d = new Date(ts);
+    return String(d.getDate()).padStart(2, '0') + '.' + String(d.getMonth() + 1).padStart(2, '0') + '.' + d.getFullYear();
+  }
+
+  /* ---------------------------------------------------------- экстерьер */
+
+  var EXT_TABS = [
+    { id: 'style', label: 'Дом' },
+    { id: 'wall',  label: 'Фасад' },
+    { id: 'roof',  label: 'Крыша' },
+    { id: 'door',  label: 'Дверь' },
+    { id: 'yard',  label: 'Участок' }
+  ];
+
+  function swatchArt(inner, w, h) {
+    return '<svg class="swatch-art" viewBox="0 0 ' + w + ' ' + h + '" preserveAspectRatio="none">' + inner + '</svg>';
+  }
+
+  function renderExt() {
+    var h = house(); if (!h) return;
+    var e = h.ext;
+    $('ext-title').textContent = h.name;
+    $('ext-stage').innerHTML = renderExterior(e, { p: 'ex_' });
+    $('btn-time').innerHTML = A.icon(e.time === 'night' ? 'moon' : 'sun');
+
+    $('ext-tabs').innerHTML = EXT_TABS.map(function (t) {
+      return '<button class="seg" role="tab" data-tab="' + t.id + '" aria-selected="' +
+        (state.extTab === t.id) + '">' + t.label + '</button>';
+    }).join('');
+
+    var out = '';
+    if (state.extTab === 'style') {
+      out += '<div class="panel-label">Форма дома</div><div class="catalog">';
+      A.HOUSE_STYLES.forEach(function (s) {
+        var prev = '<svg viewBox="60 20 340 290" preserveAspectRatio="xMidYMax meet">' +
+          defs('sp' + s.id + '_') +
+          '<style>.glass{fill:#BBD8E8}.frame{fill:#EFEDE7}.frameLine{stroke:#EFEDE7;stroke-width:4}' +
+          '.frameStroke{color:#EFEDE7}.door{fill:' + e.door + '}.doorPanel{fill:' + A.sh(e.door, 0.12) + '}</style>' +
+          s.draw(mat(A.EXT_WALL, e.wall), mat(A.EXT_ROOF, e.roof), 'sp' + s.id + '_') + '</svg>';
+        out += '<button class="cat-item" data-style="' + s.id + '"' +
+          (e.style === s.id ? ' style="border-color:var(--accent)"' : '') + '>' +
+          prev + '<span class="cat-name">' + s.label + '</span></button>';
+      });
+      out += '</div>';
+    } else if (state.extTab === 'wall') {
+      out += '<div class="panel-label">Материал фасада</div><div class="swatches">';
+      A.EXT_WALL.forEach(function (m) {
+        out += '<button class="swatch" data-extwall="' + m.id + '" aria-pressed="' + (e.wall === m.id) + '">' +
+          swatchArt(defs('sw' + m.id + '_') + A.facade(m, 0, 0, 100, 80, 'sw' + m.id + '_'), 100, 80) +
+          '<span class="swatch-name">' + m.label + '</span></button>';
+      });
+      out += '</div>';
+      out += '<div class="panel-label">Цвет рам</div><div class="swatches">';
+      ['#EFEDE7', '#D6D2C8', '#2F3336', '#5B4A3C', '#3A5573', '#2E6A57'].forEach(function (c) {
+        out += '<button class="swatch" data-frame="' + c + '" aria-pressed="' + (e.frame === c) + '">' +
+          swatchArt('<rect width="100" height="80" fill="' + c + '"/>', 100, 80) +
+          '<span class="swatch-name">Рама</span></button>';
+      });
+      out += '</div>';
+    } else if (state.extTab === 'roof') {
+      out += '<div class="panel-label">Кровля</div><div class="swatches">';
+      A.EXT_ROOF.forEach(function (m) {
+        out += '<button class="swatch" data-extroof="' + m.id + '" aria-pressed="' + (e.roof === m.id) + '">' +
+          swatchArt(defs('sr' + m.id + '_') + A.roofTex(m, '0,0 100,0 100,80 0,80', 'sr' + m.id + '_', 'q'), 100, 80) +
+          '<span class="swatch-name">' + m.label + '</span></button>';
+      });
+      out += '</div>';
+    } else if (state.extTab === 'door') {
+      out += '<div class="panel-label">Входная дверь</div><div class="swatches">';
+      DOOR_COLORS.forEach(function (c, i) {
+        out += '<button class="swatch" data-door="' + c + '" aria-pressed="' + (e.door === c) + '">' +
+          swatchArt('<rect width="100" height="80" fill="' + A.sh(c, 0.06) + '"/>' +
+            '<rect x="14" y="8" width="72" height="72" rx="3" fill="' + c + '"/>' +
+            '<rect x="24" y="16" width="52" height="26" rx="2" fill="' + A.sh(c, A.lum(c) > 0.5 ? -0.1 : 0.16) + '"/>' +
+            '<rect x="24" y="48" width="52" height="24" rx="2" fill="' + A.sh(c, A.lum(c) > 0.5 ? -0.1 : 0.16) + '"/>' +
+            '<circle cx="74" cy="52" r="3.4" fill="#D7B25E"/>', 100, 80) +
+          '<span class="swatch-name">Цвет ' + (i + 1) + '</span></button>';
+      });
+      out += '</div>';
+    } else if (state.extTab === 'yard') {
+      out += '<div class="panel-label">Газон</div><div class="swatches">';
+      LAWNS.forEach(function (c, i) {
+        out += '<button class="swatch" data-lawn="' + i + '" aria-pressed="' + (e.lawn === i) + '">' +
+          swatchArt('<rect width="100" height="80" fill="' + c + '"/>' +
+            '<rect y="20" width="100" height="10" fill="#000" opacity=".05"/>' +
+            '<rect y="46" width="100" height="12" fill="#000" opacity=".05"/>', 100, 80) +
+          '<span class="swatch-name">Трава</span></button>';
+      });
+      out += '</div>';
+      out += '<div class="panel-label">Дорожка</div><div class="swatches">';
+      PATHS.forEach(function (m) {
+        out += '<button class="swatch" data-path="' + m.id + '" aria-pressed="' + (e.path === m.id) + '">' +
+          swatchArt('<rect width="100" height="80" fill="' + m.colors[0] + '"/>' +
+            '<g stroke="' + m.colors[1] + '" stroke-width="3">' +
+            '<line x1="0" y1="18" x2="100" y2="18"/><line x1="0" y1="40" x2="100" y2="40"/>' +
+            '<line x1="0" y1="64" x2="100" y2="64"/></g>', 100, 80) +
+          '<span class="swatch-name">' + m.label + '</span></button>';
+      });
+      out += '</div>';
+      out += '<div class="panel-label">Озеленение</div><div class="rows">';
+      out += ctlStepper('Деревья', e.trees, 'trees');
+      out += ctlSwitch('Хвойные', e.conifer, 'conifer');
+      out += ctlSwitch('Кусты', e.bushes, 'bushes');
+      out += ctlSwitch('Цветы', e.flowers, 'flowers');
+      out += ctlSwitch('Забор', e.fence, 'fence');
+      out += ctlSwitch('Садовые фонари', e.lights, 'lights');
+      out += '</div>';
+    }
+    $('ext-panel').innerHTML = out;
+  }
+
+  function ctlSwitch(label, on, key) {
+    return '<div class="row-ctl"><span class="lbl">' + label + '</span>' +
+      '<button class="switch" role="switch" aria-checked="' + !!on + '" data-toggle="' + key + '"></button></div>';
+  }
+  function ctlStepper(label, val, key) {
+    return '<div class="row-ctl"><span class="lbl">' + label + '</span><span class="stepper">' +
+      '<button data-step="' + key + '" data-dir="-1" aria-label="Меньше">−</button>' +
+      '<span class="val">' + val + '</span>' +
+      '<button data-step="' + key + '" data-dir="1" aria-label="Больше">+</button></span></div>';
+  }
+
+  /* ---------------------------------------------------------- список комнат */
+
+  function renderRooms() {
+    var h = house(); if (!h) return;
+    var out = '';
+    A.ROOMS.forEach(function (rd, i) {
+      var r = h.rooms[rd.id];
+      var n = r.items.length;
+      out += '<button class="room-tile" data-room="' + rd.id + '">' +
+        '<span class="room-tile-art" data-art="' + rd.id + '"></span>' +
+        '<span class="room-tile-meta">' +
+          '<span class="room-tile-name">' + rd.label + '</span>' +
+          '<span class="room-tile-count">' + (n ? n + ' ' + plural(n, 'предмет', 'предмета', 'предметов') : 'пусто') + '</span>' +
+        '</span>' +
+        '<span class="room-tile-go">' + A.icon('arrowRight') + '</span>' +
+      '</button>';
+    });
+    $('room-grid').innerHTML = out;
+    var arts = $('room-grid').querySelectorAll('[data-art]');
+    for (var i = 0; i < arts.length; i++) {
+      arts[i].innerHTML = renderRoom(h.rooms[arts[i].dataset.art], { p: 'rt' + i + '_' });
+    }
+  }
+
+  /* ---------------------------------------------------------- редактор комнаты */
+
+  var ROOM_TABS = [
+    { id: 'items', label: 'Предметы' },
+    { id: 'wall',  label: 'Стены' },
+    { id: 'floor', label: 'Пол' }
+  ];
+
+  function renderRoomEditor() {
+    var h = house(); if (!h) return;
+    var rd = roomDef(state.roomId), r = h.rooms[state.roomId];
+    $('room-title').textContent = rd.label;
+    $('btn-mood').innerHTML = A.icon(r.mood === 'evening' ? 'moon' : 'sun');
+
+    var stage = $('room-stage');
+    var toolbar = $('obj-toolbar');
+    stage.innerHTML = renderRoom(r, { sel: state.sel, p: 'rm_' });
+    stage.appendChild(toolbar);
+    bindStage(stage.querySelector('svg'));
+    syncToolbar();
+
+    $('room-tabs').innerHTML = ROOM_TABS.map(function (t) {
+      return '<button class="seg" role="tab" data-tab="' + t.id + '" aria-selected="' +
+        (state.roomTab === t.id) + '">' + t.label + '</button>';
+    }).join('');
+
+    var out = '';
+    if (state.roomTab === 'items') {
+      out += '<div class="panel-label">Нажми, чтобы добавить</div><div class="catalog">';
+      rd.items.forEach(function (id) {
+        var d = A.FURNITURE[id];
+        if (!d) return;
+        out += '<button class="cat-item" data-add="' + id + '">' +
+          '<svg viewBox="0 0 ' + d.w + ' ' + d.h + '" preserveAspectRatio="xMidYMax meet">' +
+          defs('c' + id + '_') + d.draw(d.tint || null) + '</svg>' +
+          '<span class="cat-name">' + d.label + '</span></button>';
+      });
+      out += '</div>';
+    } else if (state.roomTab === 'wall') {
+      out += '<div class="panel-label">Отделка стен</div><div class="swatches">';
+      A.WALL_MATERIALS.forEach(function (m) {
+        out += '<button class="swatch" data-wall="' + m.id + '" aria-pressed="' + (r.wall === m.id) + '">' +
+          swatchArt(defs('mw' + m.id + '_') + A.renderWall(m, 0, 0, 100, 80, 'mw' + m.id + '_'), 100, 80) +
+          '<span class="swatch-name">' + m.label + '</span></button>';
+      });
+      out += '</div>';
+    } else {
+      out += '<div class="panel-label">Покрытие пола</div><div class="swatches">';
+      A.FLOOR_MATERIALS.forEach(function (m) {
+        var g = { W: 100, H: 80, wallY: 0,
+          xAt: function (cm, fy) { return 50 + cm * (0.1 + 0.1 * fy); },
+          yAt: function (fy) { return fy * 80; } };
+        out += '<button class="swatch" data-floor="' + m.id + '" aria-pressed="' + (r.floor === m.id) + '">' +
+          swatchArt(defs('mf' + m.id + '_') + A.renderFloor(m, g, 'mf' + m.id + '_'), 100, 80) +
+          '<span class="swatch-name">' + m.label + '</span></button>';
+      });
+      out += '</div>';
+    }
+    $('room-panel').innerHTML = out;
+  }
+
+  function selItem() {
+    var r = room();
+    if (!r || !state.sel) return null;
+    for (var i = 0; i < r.items.length; i++) if (r.items[i].uid === state.sel) return r.items[i];
     return null;
   }
 
-  /* ============================ EVENTS ============================ */
-
-  document.getElementById('btn-new-house').addEventListener('click', function () {
-    playPop(700);
-    goNameScreen();
-  });
-
-  document.getElementById('btn-name-back').addEventListener('click', function () {
-    playPop(440);
-    goHome();
-  });
-
-  document.getElementById('btn-name-next').addEventListener('click', function () {
-    var input = document.getElementById('house-name-input');
-    var name = input.value.trim() || 'Дом мечты';
-    var house = createHouse(name);
-    state.houses.push(house);
-    state.currentHouseId = house.id;
-    saveCurrent();
-    playPop(700);
-    goExterior();
-  });
-
-  document.getElementById('house-name-input').addEventListener('keydown', function (ev) {
-    if (ev.key === 'Enter') document.getElementById('btn-name-next').click();
-  });
-
-  document.getElementById('btn-exterior-back').addEventListener('click', function () {
-    playPop(440);
-    goHome();
-  });
-  document.getElementById('btn-exterior-next').addEventListener('click', function () {
-    playPop(700);
-    goRooms();
-  });
-
-  document.getElementById('exterior-tabs').addEventListener('click', function (ev) {
-    var btn = ev.target.closest('.tab-btn');
-    if (!btn) return;
-    state.exteriorTab = btn.dataset.tab;
-    playPop(520);
-    renderExteriorEditor();
-  });
-
-  document.getElementById('exterior-panel').addEventListener('click', function (ev) {
-    var house = getCurrentHouse();
-    if (!house) return;
-    var shapeBtn = ev.target.closest('[data-shape]');
-    if (shapeBtn) {
-      house.exterior.shape = shapeBtn.dataset.shape;
-      saveCurrent();
-      playPop(600);
-      renderExteriorEditor();
-      return;
+  function syncToolbar() {
+    var tb = $('obj-toolbar');
+    var it = selItem();
+    if (!it) { tb.hidden = true; tb.innerHTML = ''; return; }
+    var d = itemDef(it.id);
+    var html = '<button data-act="smaller" aria-label="Меньше">' + A.icon('shrink') + '</button>' +
+      '<button data-act="bigger" aria-label="Больше">' + A.icon('grow') + '</button>' +
+      '<button data-act="flip" aria-label="Отразить">' + A.icon('flip') + '</button>' +
+      '<button data-act="dup" aria-label="Дублировать">' + A.icon('copy') + '</button>';
+    if (d.cat !== 'wall') {
+      html += '<button data-act="front" aria-label="Вперёд">' + A.icon('front') + '</button>';
     }
-    var swatch = ev.target.closest('[data-field]');
-    if (swatch && !swatch.hasAttribute('data-custom')) {
-      house.exterior[swatch.dataset.field] = swatch.dataset.color;
-      saveCurrent();
-      playPop(600);
-      renderExteriorEditor();
-      return;
-    }
-    var stepBtn = ev.target.closest('[data-act]');
-    if (stepBtn) {
-      if (stepBtn.dataset.act === 'tree-plus') house.exterior.trees = Math.min(3, house.exterior.trees + 1);
-      if (stepBtn.dataset.act === 'tree-minus') house.exterior.trees = Math.max(0, house.exterior.trees - 1);
-      saveCurrent();
-      playPop(560);
-      renderExteriorEditor();
-      return;
-    }
-    var toggleBtn = ev.target.closest('[data-toggle]');
-    if (toggleBtn) {
-      var f = toggleBtn.dataset.toggle;
-      house.exterior[f] = !house.exterior[f];
-      saveCurrent();
-      playPop(560);
-      renderExteriorEditor();
-    }
-  });
+    html += '<span class="sep"></span>' +
+      '<button data-act="del" class="danger" aria-label="Удалить">' + A.icon('trash') + '</button>';
+    tb.innerHTML = html;
+    tb.hidden = false;
+  }
 
-  document.getElementById('exterior-panel').addEventListener('input', function (ev) {
-    var custom = ev.target.closest('[data-custom]');
-    if (!custom) return;
-    var house = getCurrentHouse();
-    if (!house) return;
-    house.exterior[custom.dataset.field] = custom.value;
-    saveCurrent();
-    renderExteriorEditor();
-  });
+  /* --- перетаскивание --- */
 
-  document.getElementById('btn-rooms-back').addEventListener('click', function () {
-    playPop(440);
-    goExterior();
-  });
-  document.getElementById('btn-rooms-done').addEventListener('click', function () {
-    playPop(760);
-    goFinal();
-  });
+  function svgPt(svg, ev) {
+    var m = svg.getScreenCTM();
+    if (!m) return { x: 0, y: 0 };
+    var pt = svg.createSVGPoint();
+    pt.x = ev.clientX; pt.y = ev.clientY;
+    var q = pt.matrixTransform(m.inverse());
+    return { x: q.x, y: q.y };
+  }
 
-  document.getElementById('room-cards').addEventListener('click', function (ev) {
-    var card = ev.target.closest('[data-room]');
-    if (!card) return;
-    playPop(600);
-    goRoomEditor(card.dataset.room);
-  });
-
-  document.getElementById('btn-room-back').addEventListener('click', function () {
-    playPop(440);
-    goRooms();
-  });
-
-  document.getElementById('room-tabs').addEventListener('click', function (ev) {
-    var btn = ev.target.closest('.tab-btn');
-    if (!btn) return;
-    state.roomTab = btn.dataset.tab;
-    playPop(520);
-    renderRoomEditor();
-  });
-
-  document.getElementById('room-panel').addEventListener('click', function (ev) {
-    var house = getCurrentHouse();
-    if (!house) return;
-    var room = house.rooms[state.editingRoomId];
-
-    var addBtn = ev.target.closest('[data-add]');
-    if (addBtn) {
-      var roomType = roomTypeById(state.editingRoomId);
-      var fdef = roomType.furniture.filter(function (f) { return f.id === addBtn.dataset.add; })[0];
-      if (fdef) {
-        var newItem = {
-          uid: uid(),
-          itemId: fdef.id,
-          emoji: fdef.emoji,
-          x: 30 + Math.random() * 40,
-          y: 30 + Math.random() * 40,
-          scale: 1,
-          flip: false
-        };
-        room.items.push(newItem);
-        state.selectedItemUid = newItem.uid;
-        saveCurrent();
-        playPop(760);
-        renderRoomEditor();
+  function bindStage(svg) {
+    if (!svg) return;
+    svg.addEventListener('pointerdown', function (ev) {
+      var g = ev.target.closest ? ev.target.closest('.obj') : null;
+      var r = room();
+      if (!g) {
+        if (state.sel) { state.sel = null; renderRoomEditor(); }
+        return;
       }
-      return;
-    }
+      ev.preventDefault();
+      var uidAttr = g.dataset.uid;
+      if (state.sel !== uidAttr) { state.sel = uidAttr; tick(600, .035); renderRoomEditor(); }
 
-    var swatch = ev.target.closest('[data-field]');
-    if (swatch && !swatch.hasAttribute('data-custom')) {
-      room[swatch.dataset.field] = swatch.dataset.color;
-      saveCurrent();
-      playPop(600);
-      renderRoomEditor();
-    }
-  });
+      var it = selItem(); if (!it) return;
+      var d = itemDef(it.id);
+      var live = $('room-stage').querySelector('svg');
+      var start = svgPt(live, ev);
+      var moved = false, grab;
 
-  document.getElementById('room-panel').addEventListener('input', function (ev) {
-    var custom = ev.target.closest('[data-custom]');
-    if (!custom) return;
-    var house = getCurrentHouse();
-    if (!house) return;
-    var room = house.rooms[state.editingRoomId];
-    room[custom.dataset.field] = custom.value;
-    saveCurrent();
-    renderRoomEditor();
-  });
-
-  document.getElementById('room-canvas').addEventListener('pointerdown', function (ev) {
-    if (ev.target.closest('.room-item')) return;
-    state.selectedItemUid = null;
-    document.querySelectorAll('.room-item').forEach(function (n) { n.classList.remove('selected'); });
-    document.getElementById('item-toolbar').hidden = true;
-  });
-
-  document.getElementById('item-toolbar').addEventListener('click', function (ev) {
-    var btn = ev.target.closest('[data-act]');
-    if (!btn) return;
-    var house = getCurrentHouse();
-    var room = house.rooms[state.editingRoomId];
-    var item = findItem(room, state.selectedItemUid);
-    if (!item) return;
-    var act = btn.dataset.act;
-    if (act === 'bigger') item.scale = Math.min(2.0, (item.scale || 1) + 0.15);
-    if (act === 'smaller') item.scale = Math.max(0.5, (item.scale || 1) - 0.15);
-    if (act === 'flip') item.flip = !item.flip;
-    if (act === 'delete') {
-      room.items = room.items.filter(function (i) { return i.uid !== item.uid; });
-      state.selectedItemUid = null;
-      document.getElementById('item-toolbar').hidden = true;
-    }
-    saveCurrent();
-    playPop(act === 'delete' ? 380 : 600);
-    renderRoomEditor();
-  });
-
-  document.getElementById('btn-final-edit').addEventListener('click', function () {
-    playPop(440);
-    goRooms();
-  });
-  document.getElementById('btn-final-home').addEventListener('click', function () {
-    playPop(700);
-    showToast('Дом сохранён! 🎉');
-    goHome();
-  });
-
-  document.getElementById('house-list').addEventListener('click', function (ev) {
-    var del = ev.target.closest('[data-delete]');
-    if (del) {
-      var h = findHouse(del.dataset.delete);
-      if (h) {
-        showConfirm('Удалить дом «' + h.name + '»?', function () {
-          state.houses = state.houses.filter(function (x) { return x.id !== h.id; });
-          saveCurrent();
-          playPop(380);
-          renderHome();
-        });
+      if (d.cat === 'wall') {
+        grab = { x: it.x - ROOM.cmFromX(start.x, 0), wy: (it.wy || .4) - start.y / ROOM.wallY };
+      } else {
+        var f0 = ROOM.fyFromY(start.y);
+        grab = { x: it.x - ROOM.cmFromX(start.x, f0), fy: it.fy - f0 };
       }
+
+      function move(mv) {
+        moved = true;
+        var p2 = svgPt(live, mv);
+        var sc = it.scale || 1;
+        if (d.cat === 'wall') {
+          var wlim = ROOM.limFor(0, d.w * sc);
+          it.x = clamp(ROOM.cmFromX(p2.x, 0) + grab.x, -wlim, wlim);
+          var hh = d.h * ROOM.back * sc / 2;
+          it.wy = clamp(p2.y / ROOM.wallY + grab.wy, hh / ROOM.wallY, 1 - hh / ROOM.wallY - 0.02);
+        } else {
+          it.fy = clamp(ROOM.fyFromY(p2.y) + grab.fy, 0, 1);
+          var lim = ROOM.limFor(it.fy, d.w * sc);
+          it.x = clamp(ROOM.cmFromX(p2.x, it.fy) + grab.x, -lim, lim);
+        }
+        redrawStage();
+      }
+      function up() {
+        window.removeEventListener('pointermove', move);
+        window.removeEventListener('pointerup', up);
+        window.removeEventListener('pointercancel', up);
+        if (moved) { save(); renderRoomEditor(); }
+      }
+      window.addEventListener('pointermove', move);
+      window.addEventListener('pointerup', up);
+      window.addEventListener('pointercancel', up);
+    });
+  }
+
+  /** Быстрая перерисовка только сцены — без пересборки панели. */
+  function redrawStage() {
+    var stage = $('room-stage'), tb = $('obj-toolbar');
+    var r = room(); if (!r) return;
+    stage.innerHTML = renderRoom(r, { sel: state.sel, p: 'rm_' });
+    stage.appendChild(tb);
+    bindStage(stage.querySelector('svg'));
+  }
+
+  /**
+   * Ищет самое свободное место для нового предмета: перебирает сетку
+   * позиций и берёт ту, что дальше всего от уже стоящих соседей.
+   */
+  function findSlot(r, d) {
+    var same = r.items.filter(function (x) {
+      var od = itemDef(x.id);
+      return od && od.cat === d.cat;
+    });
+    var cands = [];
+    var xs = [-0.68, -0.34, 0, 0.34, 0.68];
+    var ds;
+    if (d.cat === 'wall') ds = [0.3, 0.52, 0.16];
+    else if (d.cat === 'rug') ds = [0.5, 0.75];
+    else if (d.against) ds = [0.03, 0.12];       /* гарнитур, шкаф — к стене */
+    else ds = [0.22, 0.46, 0.72, 0.96];
+    xs.forEach(function (fx) {
+      ds.forEach(function (fd) {
+        var lim = ROOM.limFor(d.cat === 'wall' ? 0 : fd, d.w);
+        cands.push({ x: clamp(fx * ROOM.HALF_CM, -lim, lim), d: fd });
+      });
+    });
+
+    var best = cands[0], bestScore = -1;
+    cands.forEach(function (c) {
+      var worst = 1e9;
+      same.forEach(function (o) {
+        var od = itemDef(o.id);
+        var dx = Math.abs(c.x - o.x) / Math.max(60, (d.w + od.w) / 2);
+        var dy = Math.abs(c.d - (d.cat === 'wall' ? (o.wy || 0.4) : o.fy)) * 3.2;
+        worst = Math.min(worst, Math.sqrt(dx * dx + dy * dy));
+      });
+      /* лёгкое предпочтение центру, когда всё свободно */
+      var score = worst - Math.abs(c.x) / (ROOM.HALF_CM * 12);
+      if (score > bestScore) { bestScore = score; best = c; }
+    });
+    return best;
+  }
+
+  function addItem(id) {
+    var r = room(); if (!r) return;
+    var d = A.FURNITURE[id];
+    var it = { uid: uid(), id: id, scale: 1, flip: false };
+    var slot = findSlot(r, d);
+    it.x = slot.x;
+    if (d.cat === 'wall') it.wy = slot.d;
+    else it.fy = slot.d;
+    r.items.push(it);
+    state.sel = it.uid;
+    save();
+    tick(760, .05);
+    renderRoomEditor();
+  }
+
+  /* ---------------------------------------------------------- итог */
+
+  function renderFinal() {
+    var h = house(); if (!h) return;
+    $('final-title').textContent = h.name;
+    var out = '<div class="summary-block">' +
+      '<div class="summary-head"><h3>Снаружи</h3><span>' +
+      (A.HOUSE_STYLES.filter(function (s) { return s.id === h.ext.style; })[0] || {}).label + '</span></div>' +
+      '<div class="summary-art" style="aspect-ratio:16/11" data-ext="1"></div></div>';
+    A.ROOMS.forEach(function (rd) {
+      var n = h.rooms[rd.id].items.length;
+      out += '<div class="summary-block">' +
+        '<div class="summary-head"><h3>' + rd.label + '</h3><span>' +
+        (n ? n + ' ' + plural(n, 'предмет', 'предмета', 'предметов') : 'пусто') + '</span></div>' +
+        '<div class="summary-art" style="aspect-ratio:4/3" data-sroom="' + rd.id + '"></div></div>';
+    });
+    $('summary').innerHTML = out;
+    $('summary').querySelector('[data-ext]').innerHTML = renderExterior(h.ext, { p: 'fx_' });
+    var rs = $('summary').querySelectorAll('[data-sroom]');
+    for (var i = 0; i < rs.length; i++) {
+      rs[i].innerHTML = renderRoom(h.rooms[rs[i].dataset.sroom], { p: 'fr' + i + '_' });
+      rs[i].dataset.click = rs[i].dataset.sroom;
+    }
+  }
+
+  /* ==========================================================
+     НАВИГАЦИЯ
+     ========================================================== */
+
+  function goHome() { state.houseId = null; state.sel = null; renderHome(); show('s-home'); }
+  function goExt() { state.extTab = 'style'; renderExt(); show('s-ext'); }
+  function goRooms() { renderRooms(); show('s-rooms'); }
+  function goRoom(id) { state.roomId = id; state.roomTab = 'items'; state.sel = null; renderRoomEditor(); show('s-room'); }
+  function goFinal() { renderFinal(); show('s-final'); }
+
+  /* ==========================================================
+     СОБЫТИЯ
+     ========================================================== */
+
+  $('btn-new').innerHTML = A.icon('plus') + '<span>Новый проект</span>';
+  $('btn-name-back').innerHTML = A.icon('back');
+  $('btn-name-next').innerHTML = '<span>Дальше</span>' + A.icon('arrowRight');
+  $('btn-ext-back').innerHTML = A.icon('back');
+  $('btn-ext-next').innerHTML = '<span>К комнатам</span>' + A.icon('arrowRight');
+  $('btn-rooms-back').innerHTML = A.icon('back');
+  $('btn-rooms-done').innerHTML = A.icon('check') + '<span>Готово</span>';
+  $('btn-room-back').innerHTML = A.icon('back');
+  $('btn-final-back').innerHTML = A.icon('back');
+  $('btn-final-edit').innerHTML = A.icon('edit') + '<span>Изменить</span>';
+  $('btn-final-home').innerHTML = A.icon('home') + '<span>Мои дома</span>';
+
+  var SUGGEST = ['Дом на холме', 'Лесная студия', 'Дом у моря', 'Городской лофт', 'Дом с террасой'];
+  $('name-suggest').innerHTML = SUGGEST.map(function (s) {
+    return '<button class="chip" data-suggest="' + s + '">' + s + '</button>';
+  }).join('');
+  $('name-suggest').addEventListener('click', function (ev) {
+    var b = ev.target.closest('[data-suggest]');
+    if (!b) return;
+    $('name-field').value = b.dataset.suggest;
+    tick(560, .03);
+  });
+
+  $('btn-new').addEventListener('click', function () {
+    tick(700, .05);
+    $('name-field').value = '';
+    show('s-name');
+    setTimeout(function () { $('name-field').focus(); }, 240);
+  });
+
+  $('btn-name-back').addEventListener('click', function () { tick(420, .03); goHome(); });
+
+  $('btn-name-next').addEventListener('click', function () {
+    var name = $('name-field').value.trim() || 'Дом мечты';
+    var h = newHouse(name);
+    state.houses.push(h);
+    state.houseId = h.id;
+    save();
+    tick(720, .05);
+    goExt();
+  });
+  $('name-field').addEventListener('keydown', function (ev) {
+    if (ev.key === 'Enter') $('btn-name-next').click();
+  });
+
+  $('btn-ext-back').addEventListener('click', function () { tick(420, .03); goHome(); });
+  $('btn-ext-next').addEventListener('click', function () { tick(700, .05); goRooms(); });
+
+  $('btn-time').addEventListener('click', function () {
+    var e = house().ext;
+    var order = ['day', 'sunset', 'night'];
+    e.time = order[(order.indexOf(e.time) + 1) % 3];
+    save(); tick(620, .04); renderExt();
+    toast(mat(A.TIMES, e.time).label);
+  });
+
+  $('ext-tabs').addEventListener('click', function (ev) {
+    var b = ev.target.closest('.seg'); if (!b) return;
+    state.extTab = b.dataset.tab; tick(540, .03); renderExt();
+  });
+
+  $('ext-panel').addEventListener('click', function (ev) {
+    var h = house(); if (!h) return;
+    var e = h.ext, b, changed = true;
+    if ((b = ev.target.closest('[data-style]'))) e.style = b.dataset.style;
+    else if ((b = ev.target.closest('[data-extwall]'))) e.wall = b.dataset.extwall;
+    else if ((b = ev.target.closest('[data-extroof]'))) e.roof = b.dataset.extroof;
+    else if ((b = ev.target.closest('[data-door]'))) e.door = b.dataset.door;
+    else if ((b = ev.target.closest('[data-frame]'))) e.frame = b.dataset.frame;
+    else if ((b = ev.target.closest('[data-lawn]'))) e.lawn = +b.dataset.lawn;
+    else if ((b = ev.target.closest('[data-path]'))) e.path = b.dataset.path;
+    else if ((b = ev.target.closest('[data-toggle]'))) e[b.dataset.toggle] = !e[b.dataset.toggle];
+    else if ((b = ev.target.closest('[data-step]'))) {
+      e[b.dataset.step] = clamp(e[b.dataset.step] + (+b.dataset.dir), 0, 5);
+    } else changed = false;
+    if (changed) { save(); tick(600, .035); renderExt(); }
+  });
+
+  $('btn-rooms-back').addEventListener('click', function () { tick(420, .03); goExt(); });
+  $('btn-rooms-done').addEventListener('click', function () { tick(780, .05); goFinal(); });
+
+  $('room-grid').addEventListener('click', function (ev) {
+    var b = ev.target.closest('[data-room]'); if (!b) return;
+    tick(620, .04); goRoom(b.dataset.room);
+  });
+
+  $('btn-room-back').addEventListener('click', function () { tick(420, .03); goRooms(); });
+
+  $('btn-mood').addEventListener('click', function () {
+    var r = room();
+    r.mood = r.mood === 'evening' ? 'day' : 'evening';
+    save(); tick(600, .04); renderRoomEditor();
+    toast(r.mood === 'evening' ? 'Вечер' : 'День');
+  });
+
+  $('room-tabs').addEventListener('click', function (ev) {
+    var b = ev.target.closest('.seg'); if (!b) return;
+    state.roomTab = b.dataset.tab; tick(540, .03); renderRoomEditor();
+  });
+
+  $('room-panel').addEventListener('click', function (ev) {
+    var r = room(); if (!r) return;
+    var b;
+    if ((b = ev.target.closest('[data-add]'))) { addItem(b.dataset.add); return; }
+    if ((b = ev.target.closest('[data-wall]'))) { r.wall = b.dataset.wall; }
+    else if ((b = ev.target.closest('[data-floor]'))) { r.floor = b.dataset.floor; }
+    else return;
+    save(); tick(600, .035); renderRoomEditor();
+  });
+
+  $('obj-toolbar').addEventListener('click', function (ev) {
+    var b = ev.target.closest('[data-act]'); if (!b) return;
+    var r = room(), it = selItem(); if (!it) return;
+    var act = b.dataset.act;
+    if (act === 'bigger') it.scale = clamp((it.scale || 1) + 0.12, 0.55, 1.8);
+    else if (act === 'smaller') it.scale = clamp((it.scale || 1) - 0.12, 0.55, 1.8);
+    else if (act === 'flip') it.flip = !it.flip;
+    else if (act === 'front') it.fy = clamp(it.fy + 0.14, 0, 1);
+    else if (act === 'dup') {
+      var copy = JSON.parse(JSON.stringify(it));
+      copy.uid = uid();
+      if (itemDef(it.id).cat === 'wall') copy.x = clamp(copy.x + 70, -ROOM.HALF_CM, ROOM.HALF_CM);
+      else copy.x = clamp(copy.x + 80, -ROOM.HALF_CM, ROOM.HALF_CM);
+      r.items.push(copy);
+      state.sel = copy.uid;
+    } else if (act === 'del') {
+      r.items = r.items.filter(function (x) { return x.uid !== it.uid; });
+      state.sel = null;
+    }
+    save();
+    tick(act === 'del' ? 340 : 620, .04);
+    renderRoomEditor();
+  });
+
+  $('btn-final-back').addEventListener('click', function () { tick(420, .03); goRooms(); });
+  $('btn-final-edit').addEventListener('click', function () { tick(560, .04); goRooms(); });
+  $('btn-final-home').addEventListener('click', function () {
+    tick(720, .05); toast('Проект сохранён'); goHome();
+  });
+
+  $('summary').addEventListener('click', function (ev) {
+    var b = ev.target.closest('[data-sroom]'); if (!b) return;
+    tick(600, .04); goRoom(b.dataset.sroom);
+  });
+
+  $('house-list').addEventListener('click', function (ev) {
+    var b;
+    if ((b = ev.target.closest('[data-del]'))) {
+      var h = findHouse(b.dataset.del); if (!h) return;
+      ask('Удалить проект?', '«' + h.name + '» исчезнет навсегда.', 'Удалить', function () {
+        state.houses = state.houses.filter(function (x) { return x.id !== h.id; });
+        save(); tick(340, .04); renderHome(); toast('Проект удалён');
+      });
       return;
     }
-    var view = ev.target.closest('[data-view]');
-    if (view) {
-      state.currentHouseId = view.dataset.view;
-      playPop(600);
-      goFinal();
-      return;
+    if ((b = ev.target.closest('[data-view]'))) {
+      state.houseId = b.dataset.view; tick(620, .04); goFinal(); return;
     }
-    var open = ev.target.closest('[data-open]');
-    if (open) {
-      state.currentHouseId = open.dataset.open;
-      playPop(600);
-      goExterior();
+    if ((b = ev.target.closest('[data-open]'))) {
+      state.houseId = b.dataset.open; tick(620, .04); goExt();
     }
   });
 
-  /* ============================ INIT ============================ */
+  $('confirm-yes').addEventListener('click', function () {
+    $('confirm').hidden = true;
+    if (confirmCb) confirmCb();
+    confirmCb = null;
+  });
+  $('confirm-no').addEventListener('click', function () {
+    $('confirm').hidden = true; confirmCb = null;
+  });
+  $('confirm').addEventListener('click', function (ev) {
+    if (ev.target === $('confirm')) { $('confirm').hidden = true; confirmCb = null; }
+  });
 
+  document.addEventListener('keydown', function (ev) {
+    if (ev.key === 'Escape') {
+      if (!$('confirm').hidden) { $('confirm').hidden = true; confirmCb = null; }
+      else if (state.sel) { state.sel = null; renderRoomEditor(); }
+    }
+    if ((ev.key === 'Delete' || ev.key === 'Backspace') && state.sel &&
+        $('s-room').classList.contains('active') && document.activeElement.tagName !== 'INPUT') {
+      ev.preventDefault();
+      var r = room();
+      r.items = r.items.filter(function (x) { return x.uid !== state.sel; });
+      state.sel = null; save(); renderRoomEditor();
+    }
+  });
+
+  /* ---------------------------------------------------------- старт */
   renderHome();
-  showScreen('screen-home');
+  show('s-home');
 })();

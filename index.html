@@ -2,113 +2,122 @@
 <html lang="ru">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-<meta name="theme-color" content="#FF6B6B">
-<title>Мой дом мечты 🏡</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#F2F1ED" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#101211" media="(prefers-color-scheme: dark)">
+<title>Дом мечты</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700;12..96,800&family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
 <div id="app">
 
-  <!-- ЭКРАН: ГЛАВНАЯ -->
-  <section id="screen-home" class="screen active">
+  <!-- ГЛАВНАЯ -->
+  <section id="s-home" class="screen active">
     <header class="hero">
-      <div class="hero-sky">☁️ <span>☀️</span> ☁️</div>
-      <h1>🏡 Мой дом мечты</h1>
-      <p class="hero-sub">Придумай и построй дом своей мечты!</p>
+      <h1>Дом мечты</h1>
+      <p>Спроектируй дом снаружи и обставь комнаты внутри.</p>
     </header>
     <div id="house-list" class="house-list"></div>
-    <button id="btn-new-house" class="btn btn-primary btn-big btn-float">✨ Новый дом</button>
-  </section>
-
-  <!-- ЭКРАН: ИМЯ ДОМА -->
-  <section id="screen-name" class="screen">
-    <div class="panel-center">
-      <h2>Как назовём твой дом?</h2>
-      <input id="house-name-input" class="text-input" maxlength="24" placeholder="Например: Дом мечты">
-      <div class="row nav-row">
-        <button id="btn-name-back" class="btn btn-secondary">← Назад</button>
-        <button id="btn-name-next" class="btn btn-primary">Дальше →</button>
-      </div>
+    <div class="fab-wrap">
+      <button id="btn-new" class="btn btn-primary btn-lg"></button>
     </div>
   </section>
 
-  <!-- ЭКРАН: СНАРУЖИ -->
-  <section id="screen-exterior" class="screen">
-    <div class="editor-preview" id="exterior-preview"></div>
-    <div class="editor-tabs" id="exterior-tabs">
-      <button class="tab-btn active" data-tab="shape">🏠 Дом</button>
-      <button class="tab-btn" data-tab="wall">🎨 Стены</button>
-      <button class="tab-btn" data-tab="roof">🔺 Крыша</button>
-      <button class="tab-btn" data-tab="door">🚪 Дверь</button>
-      <button class="tab-btn" data-tab="window">🪟 Окна</button>
-      <button class="tab-btn" data-tab="yard">🌳 Двор</button>
+  <!-- НАЗВАНИЕ -->
+  <section id="s-name" class="screen">
+    <div class="topbar">
+      <button id="btn-name-back" class="iconbtn ghost" aria-label="Назад"></button>
+      <div class="topbar-sub">Шаг 1 из 3</div>
     </div>
-    <div class="editor-panel" id="exterior-panel"></div>
-    <div class="row nav-row">
-      <button id="btn-exterior-back" class="btn btn-secondary">← Назад</button>
-      <button id="btn-exterior-next" class="btn btn-primary">Комнаты →</button>
+    <div class="center-panel">
+      <h2>Как назовём проект?</h2>
+      <p class="hint">Название увидишь в списке своих домов.</p>
+      <input id="name-field" class="field" maxlength="28" placeholder="Дом на холме" autocomplete="off">
+      <div class="chip-row" id="name-suggest"></div>
     </div>
-  </section>
-
-  <!-- ЭКРАН: СПИСОК КОМНАТ -->
-  <section id="screen-rooms" class="screen">
-    <h2 class="screen-title">Выбери комнату 🚪</h2>
-    <div class="room-cards" id="room-cards"></div>
-    <div class="row nav-row">
-      <button id="btn-rooms-back" class="btn btn-secondary">← Дом снаружи</button>
-      <button id="btn-rooms-done" class="btn btn-primary">Готово! 🏠</button>
+    <div class="actionbar">
+      <button id="btn-name-next" class="btn btn-primary btn-block"></button>
     </div>
   </section>
 
-  <!-- ЭКРАН: РЕДАКТОР КОМНАТЫ -->
-  <section id="screen-room" class="screen">
-    <h2 class="screen-title" id="room-title"></h2>
-    <div class="room-canvas-wrap">
-      <div class="room-canvas" id="room-canvas"></div>
-      <div class="item-toolbar" id="item-toolbar" hidden>
-        <button data-act="smaller">➖</button>
-        <button data-act="bigger">➕</button>
-        <button data-act="flip">🔄</button>
-        <button data-act="delete" class="toolbar-danger">🗑️</button>
-      </div>
+  <!-- ЭКСТЕРЬЕР -->
+  <section id="s-ext" class="screen">
+    <div class="topbar">
+      <button id="btn-ext-back" class="iconbtn ghost" aria-label="Назад"></button>
+      <div class="topbar-title" id="ext-title"></div>
+      <button id="btn-time" class="iconbtn" aria-label="Время суток"></button>
     </div>
-    <div class="editor-tabs" id="room-tabs">
-      <button class="tab-btn active" data-tab="furniture">🪑 Мебель</button>
-      <button class="tab-btn" data-tab="wallpaper">🎨 Обои</button>
-      <button class="tab-btn" data-tab="floor">🟫 Пол</button>
+    <div class="stage exterior" id="ext-stage"></div>
+    <div class="editor">
+      <div class="segmented" id="ext-tabs" role="tablist"></div>
+      <div class="panel" id="ext-panel"></div>
     </div>
-    <div class="editor-panel" id="room-panel"></div>
-    <div class="row nav-row">
-      <button id="btn-room-back" class="btn btn-secondary">← Комнаты</button>
+    <div class="actionbar">
+      <button id="btn-ext-next" class="btn btn-primary btn-block"></button>
     </div>
   </section>
 
-  <!-- ЭКРАН: ГОТОВЫЙ ДОМ -->
-  <section id="screen-final" class="screen">
-    <h2 class="screen-title" id="final-title"></h2>
-    <div class="final-block" id="final-exterior"></div>
-    <div class="final-rooms" id="final-rooms"></div>
-    <div class="row nav-row">
-      <button id="btn-final-edit" class="btn btn-secondary">✏️ Редактировать</button>
-      <button id="btn-final-home" class="btn btn-primary">🏡 Мои дома</button>
+  <!-- КОМНАТЫ -->
+  <section id="s-rooms" class="screen">
+    <div class="topbar">
+      <button id="btn-rooms-back" class="iconbtn ghost" aria-label="Назад"></button>
+      <div class="topbar-title">Комнаты</div>
+      <div class="topbar-sub">Шаг 3 из 3</div>
+    </div>
+    <div class="room-grid" id="room-grid"></div>
+    <div class="actionbar">
+      <button id="btn-rooms-done" class="btn btn-primary btn-block"></button>
+    </div>
+  </section>
+
+  <!-- РЕДАКТОР КОМНАТЫ -->
+  <section id="s-room" class="screen">
+    <div class="topbar">
+      <button id="btn-room-back" class="iconbtn ghost" aria-label="Назад"></button>
+      <div class="topbar-title" id="room-title"></div>
+      <button id="btn-mood" class="iconbtn" aria-label="Освещение"></button>
+    </div>
+    <div class="stage room" id="room-stage">
+      <div class="obj-toolbar" id="obj-toolbar" hidden></div>
+    </div>
+    <div class="editor">
+      <div class="segmented" id="room-tabs" role="tablist"></div>
+      <div class="panel" id="room-panel"></div>
+    </div>
+  </section>
+
+  <!-- ИТОГ -->
+  <section id="s-final" class="screen">
+    <div class="topbar">
+      <button id="btn-final-back" class="iconbtn ghost" aria-label="Назад"></button>
+      <div class="topbar-title" id="final-title"></div>
+    </div>
+    <div class="summary" id="summary"></div>
+    <div class="actionbar">
+      <button id="btn-final-edit" class="btn btn-ghost"></button>
+      <button id="btn-final-home" class="btn btn-primary"></button>
     </div>
   </section>
 
 </div>
-<div id="toast" class="toast"></div>
-<div id="confirm-modal" class="modal-overlay" hidden>
-  <div class="modal-box">
-    <p id="confirm-message"></p>
-    <div class="row">
-      <button id="confirm-no" class="btn btn-secondary">Нет</button>
-      <button id="confirm-yes" class="btn btn-primary">Да, удалить</button>
+
+<div id="confirm" class="overlay" hidden>
+  <div class="modal" role="dialog" aria-modal="true">
+    <h3 id="confirm-title"></h3>
+    <p id="confirm-text"></p>
+    <div class="actionbar">
+      <button id="confirm-no" class="btn btn-ghost">Отмена</button>
+      <button id="confirm-yes" class="btn btn-primary">Удалить</button>
     </div>
   </div>
 </div>
+
+<div id="toast" class="toast" role="status"></div>
+
+<script src="js/assets.js"></script>
 <script src="js/app.js"></script>
 </body>
 </html>
