@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Как прошёл массаж?</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💆</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Prata&family=Golos+Text:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="assets/styles.css">
+</head>
+<body>
+<div class="wrap">
+  <div class="topbar">
+    <div class="brand">
+      <span class="eyebrow">Отзыв после сеанса</span>
+      <h1 class="serif">Как прошёл массаж?</h1>
+    </div>
+  </div>
+
+  <div class="card" id="card-form">
+    <form id="form" novalidate>
+      <div class="q" role="radiogroup" aria-labelledby="lab1">
+        <div class="q-head">
+          <span class="q-num">1</span>
+          <h2 class="q-text serif" id="lab1">Насколько вы удовлетворены массажем?</h2>
+        </div>
+        <div class="scale s5" id="scale1"></div>
+        <div class="ends"><span>Совсем не понравилось</span><span>Всё было прекрасно</span></div>
+      </div>
+
+      <div class="q" role="radiogroup" aria-labelledby="lab2">
+        <div class="q-head">
+          <span class="q-num">2</span>
+          <h2 class="q-text serif" id="lab2">Готовы ли вы рекомендовать массаж?</h2>
+        </div>
+        <div class="scale s11" id="scale2"></div>
+        <div class="ends"><span>Точно нет</span><span>Обязательно порекомендую</span></div>
+      </div>
+
+      <div class="actions">
+        <button class="btn" type="submit" id="send">Отправить отзыв</button>
+        <p class="note" id="note">Ответ анонимный — сохраняем только две оценки и время.</p>
+      </div>
+    </form>
+  </div>
+
+  <div class="card thanks hidden" id="card-thanks">
+    <span class="mark">✓</span>
+    <h2 class="serif">Спасибо, ответ сохранён</h2>
+    <p class="note">Ваши оценки уже учтены в общей статистике.</p>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:4px">
+      <button class="btn-ghost" id="again">Ответить ещё раз</button>
+    </div>
+  </div>
+</div>
+
+<script src="assets/config.js"></script>
+<script src="assets/survey.js"></script>
+</body>
+</html>
