@@ -7,7 +7,9 @@
   var send = document.getElementById("send");
   var cardForm = document.getElementById("card-form");
   var cardThanks = document.getElementById("card-thanks");
-  var DEFAULT_NOTE = "Ответ анонимный — сохраняем только две оценки и время.";
+  var followup = document.getElementById("followup");
+  var comment = document.getElementById("comment");
+  var DEFAULT_NOTE = "Ответ анонимный — сохраняем оценки, комментарий и время.";
 
   /* шкалы */
   function buildScale(el, name, from, to) {
@@ -33,12 +35,22 @@
     return Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 9);
   }
 
+  /* Уточняющий вопрос показываем, как только видно, что оценка не идеальная:
+     не 5 в первом вопросе или не 10 во втором. */
+  function syncFollowup() {
+    var q1 = picked("q1"), q2 = picked("q2");
+    var imperfect = (q1 !== null && q1 !== 5) || (q2 !== null && q2 !== 10);
+    followup.classList.toggle("hidden", !imperfect);
+  }
+
   form.addEventListener("change", function () {
+    syncFollowup();
     if (note.classList.contains("warn")) say(DEFAULT_NOTE, false);
   });
 
   document.getElementById("again").addEventListener("click", function () {
     form.reset();
+    syncFollowup();
     cardThanks.classList.add("hidden");
     cardForm.classList.remove("hidden");
     say(DEFAULT_NOTE, false);
@@ -62,7 +74,8 @@
     send.textContent = "Отправляем…";
     say(DEFAULT_NOTE, false);
 
-    var payload = { id: uid(), q1: q1, q2: q2 };
+    var text = followup.classList.contains("hidden") ? "" : comment.value.trim().slice(0, 1000);
+    var payload = { id: uid(), q1: q1, q2: q2, comment: text };
 
     fetch(cfg.endpoint, {
       method: "POST",
