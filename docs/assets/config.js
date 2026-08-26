@@ -7,5 +7,5 @@
  *   https://script.google.com/macros/s/AKfycb.../exec
  */
 window.SURVEY_CONFIG = {
-  endpoint: "https://script.google.com/macros/s/AKfycbzgxBtVZaFLaJs_VXE63xZveXQNjt18Tsqm4-YmGcc8KTLbYaZsqCcpM4ASiWOVEUzj/exec"
+  endpoint: "https://script.google.com/macros/s/AKfycbyke31bqKjtYRIqW2WCG4yUyZKzFUpebheaQqmFDtCWWvHrxCfzX_99IciDDEOz7ltV/exec"
 };
