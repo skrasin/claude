@@ -2,9 +2,9 @@ name: Deploy survey to GitHub Pages
 
 on:
   push:
-    branches:
-      - claude/website-security-analysis-g7ersh
-      - claude/massage-survey-results-k5o4fm
+    # деплой принимает только основная ветка: окружение github-pages
+    # отклоняет запуски с любых других веток
+    branches: [claude/website-security-analysis-g7ersh]
     paths:
       - 'docs/**'
       - '.github/workflows/pages.yml'
