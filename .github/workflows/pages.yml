@@ -2,7 +2,9 @@ name: Deploy survey to GitHub Pages
 
 on:
   push:
-    branches: [claude/massage-survey-results-k5o4fm]
+    branches:
+      - claude/website-security-analysis-g7ersh
+      - claude/massage-survey-results-k5o4fm
     paths:
       - 'docs/**'
       - '.github/workflows/pages.yml'
