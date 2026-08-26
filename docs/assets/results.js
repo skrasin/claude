@@ -49,6 +49,8 @@
         if (!data || !data.ok) throw new Error("bad_response");
         responses = (data.responses || []).filter(function (r) {
           return r && isFinite(r.q1) && isFinite(r.q2);
+        }).map(function (r) {
+          return { ts: r.ts, q1: Number(r.q1), q2: Number(r.q2), comment: (r.comment || "").trim() };
         }).sort(function (a, b) { return a.ts - b.ts; });
         render();
       })
@@ -84,6 +86,12 @@
     try {
       return new Date(ts).toLocaleString("ru-RU", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" });
     } catch (e) { return ""; }
+  }
+  function esc(t) {
+    return String(t).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+  }
+  function npsColor(q2) {
+    return q2 <= 6 ? "var(--det)" : (q2 <= 8 ? "var(--pas)" : "var(--pro)");
   }
   function plural(n, one, few, many) {
     var a = Math.abs(n) % 100, b = a % 10;
@@ -152,10 +160,26 @@
       + '<div class="nps-bar">' + bar + '</div><div class="legend">' + leg + '</div>'
       + '<div class="cols">' + cols + '</div></div>';
 
+    var withNotes = responses.filter(function (r) { return r.comment; }).slice(-25).reverse();
+    if (withNotes.length) {
+      var notes = "";
+      for (var w = 0; w < withNotes.length; w++) {
+        var it = withNotes[w];
+        notes += '<div class="note-item">'
+          + '<div class="note-meta"><span>' + fmtDate(it.ts) + '</span>'
+          + '<span class="chip"><i style="background:var(--r' + it.q1 + ')"></i>' + it.q1 + ' / 5</span>'
+          + '<span class="chip"><i style="background:' + npsColor(it.q2) + '"></i>' + it.q2 + ' / 10</span></div>'
+          + '<p>' + esc(it.comment) + '</p></div>';
+      }
+      h += '<div class="card"><div class="sec-head"><h3>Что просят улучшить</h3><span>'
+        + withNotes.length + ' ' + plural(withNotes.length, "комментарий", "комментария", "комментариев") + '</span></div>'
+        + '<div class="notes">' + notes + '</div></div>';
+    }
+
     var last = responses.slice(-25).reverse(), trs = "";
     for (var m = 0; m < last.length; m++) {
       var a = last[m];
-      var grp = a.q2 <= 6 ? ["var(--det)", "критик"] : (a.q2 <= 8 ? ["var(--pas)", "нейтрал"] : ["var(--pro)", "промоутер"]);
+      var grp = [npsColor(a.q2), a.q2 <= 6 ? "критик" : (a.q2 <= 8 ? "нейтрал" : "промоутер")];
       trs += '<tr><td class="num">' + fmtDate(a.ts) + '</td><td class="num">' + a.q1 + ' / 5</td>'
         + '<td class="num">' + a.q2 + ' / 10</td>'
         + '<td><span class="chip" title="' + grp[1] + '"><i style="background:' + grp[0] + '"></i>' + grp[1] + '</span></td></tr>';
@@ -169,11 +193,16 @@
     document.getElementById("csv").addEventListener("click", downloadCsv);
   }
 
+  function csvCell(text) {
+    if (!text) return "";
+    return '"' + String(text).replace(/"/g, '""') + '"';
+  }
+
   function downloadCsv() {
-    var lines = ["Дата;Удовлетворённость (1-5);Готовность рекомендовать (0-10)"];
+    var lines = ["Дата;Удовлетворённость (1-5);Готовность рекомендовать (0-10);Комментарий"];
     for (var i = 0; i < responses.length; i++) {
       var a = responses[i];
-      lines.push([new Date(a.ts).toISOString(), a.q1, a.q2].join(";"));
+      lines.push([new Date(a.ts).toISOString(), a.q1, a.q2, csvCell(a.comment)].join(";"));
     }
     var blob = new Blob(["﻿" + lines.join("\r\n")], { type: "text/csv;charset=utf-8" });
     var url = URL.createObjectURL(blob);
