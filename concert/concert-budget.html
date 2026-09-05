@@ -1,0 +1,534 @@
+<title>Бюджет концерта</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Spectral:wght@500;600&family=Golos+Text:wght@400;500;600;700&display=swap">
+<style>
+:root{
+  --paper:#EDEFF3; --surface:#FFFFFF; --surface-2:#F5F7FA; --panel:#E4E8EF;
+  --ink:#171A21; --ink-2:#454C59; --muted:#737C8C;
+  --rule:#D9DFE7; --rule-strong:#AEB7C4;
+  --accent:#9C6714; --accent-ink:#7A4F0E; --accent-soft:#F3E6CD;
+  --good:#1B6F4A; --bad:#A81F16;
+  --shadow:0 1px 2px rgba(23,26,33,.06), 0 8px 24px -16px rgba(23,26,33,.28);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --paper:#13151A; --surface:#1B1E25; --surface-2:#22262E; --panel:#1F232B;
+    --ink:#ECEFF4; --ink-2:#BFC6D2; --muted:#89929F;
+    --rule:#2C313A; --rule-strong:#414956;
+    --accent:#E2AC52; --accent-ink:#F0C67F; --accent-soft:#382C15;
+    --good:#4FCB8D; --bad:#FF8175;
+    --shadow:0 1px 2px rgba(0,0,0,.4), 0 8px 24px -16px rgba(0,0,0,.7);
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#13151A; --surface:#1B1E25; --surface-2:#22262E; --panel:#1F232B;
+  --ink:#ECEFF4; --ink-2:#BFC6D2; --muted:#89929F;
+  --rule:#2C313A; --rule-strong:#414956;
+  --accent:#E2AC52; --accent-ink:#F0C67F; --accent-soft:#382C15;
+  --good:#4FCB8D; --bad:#FF8175;
+  --shadow:0 1px 2px rgba(0,0,0,.4), 0 8px 24px -16px rgba(0,0,0,.7);
+}
+
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{
+  background:var(--paper); color:var(--ink);
+  font-family:"Golos Text","Helvetica Neue",Arial,sans-serif;
+  font-size:15px; line-height:1.5;
+  -webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:920px; margin:0 auto; padding:36px 20px 72px}
+
+/* ---------- шапка ---------- */
+header{margin-bottom:26px}
+h1{
+  font-family:Spectral,Georgia,serif; font-weight:600;
+  font-size:clamp(28px,4.4vw,40px); line-height:1.1; letter-spacing:-.01em;
+  margin:0 0 6px; text-wrap:balance;
+}
+.sub{color:var(--muted); font-size:14px; margin:0; max-width:62ch}
+
+/* ---------- панель управления ---------- */
+.panel{
+  background:var(--panel); border:1px solid var(--rule);
+  border-radius:10px; padding:20px 22px;
+  display:grid; grid-template-columns:repeat(3,1fr); gap:24px 28px;
+  margin-bottom:14px;
+}
+@media (max-width:720px){ .panel{grid-template-columns:1fr; gap:20px} }
+.ctl{display:flex; flex-direction:column; gap:9px; min-width:0}
+.ctl-top{display:flex; align-items:baseline; justify-content:space-between; gap:10px}
+.ctl-label{
+  font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:.09em;
+  color:var(--muted);
+}
+.ctl-val{
+  font-size:21px; font-weight:600; font-variant-numeric:tabular-nums;
+  color:var(--ink); white-space:nowrap;
+}
+input[type=range]{
+  -webkit-appearance:none; appearance:none; width:100%; height:22px;
+  background:transparent; accent-color:var(--accent); cursor:pointer; margin:0;
+}
+input[type=range]::-webkit-slider-runnable-track{
+  height:4px; border-radius:2px; background:var(--rule-strong);
+}
+input[type=range]::-moz-range-track{height:4px; border-radius:2px; background:var(--rule-strong)}
+input[type=range]::-webkit-slider-thumb{
+  -webkit-appearance:none; appearance:none; width:18px; height:18px; margin-top:-7px;
+  border-radius:50%; background:var(--accent); border:2px solid var(--surface);
+  box-shadow:0 1px 3px rgba(0,0,0,.3);
+}
+input[type=range]::-moz-range-thumb{
+  width:18px; height:18px; border-radius:50%; background:var(--accent);
+  border:2px solid var(--surface); box-shadow:0 1px 3px rgba(0,0,0,.3);
+}
+input[type=range]:focus-visible{outline:2px solid var(--accent); outline-offset:4px; border-radius:4px}
+.scale{display:flex; justify-content:space-between; font-size:11px; color:var(--muted);
+  font-variant-numeric:tabular-nums; margin-top:-4px}
+.field{
+  font:inherit; font-size:19px; font-weight:600; font-variant-numeric:tabular-nums;
+  color:var(--ink); background:var(--surface);
+  border:1px solid var(--rule-strong); border-radius:7px;
+  padding:8px 11px; width:100%; min-width:0;
+}
+.field:focus-visible{outline:2px solid var(--accent); outline-offset:1px; border-color:var(--accent)}
+.hint{font-size:11px; color:var(--muted); margin-top:-3px}
+
+/* ---------- точка безубыточности ---------- */
+.be{
+  background:var(--surface); border:1px solid var(--rule);
+  border-left:3px solid var(--accent);
+  border-radius:10px; padding:22px 24px; margin-bottom:30px; box-shadow:var(--shadow);
+}
+.be-head{
+  font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:.09em;
+  color:var(--accent-ink); margin-bottom:12px;
+}
+.be-row{display:flex; align-items:baseline; gap:14px; flex-wrap:wrap; margin-bottom:6px}
+.be-num{
+  font-family:Spectral,Georgia,serif; font-weight:600;
+  font-size:clamp(38px,7vw,54px); line-height:1; letter-spacing:-.02em;
+  font-variant-numeric:tabular-nums; color:var(--ink);
+}
+.be-unit{font-size:17px; font-weight:500; color:var(--ink-2)}
+.pill{
+  font-size:12px; font-weight:600; padding:4px 11px; border-radius:99px;
+  border:1px solid currentColor; white-space:nowrap;
+}
+.pill.ok{color:var(--good)} .pill.no{color:var(--bad)}
+.be-note{font-size:13px; color:var(--muted); margin:0 0 18px; max-width:66ch}
+.be-note b{color:var(--ink-2); font-weight:600; font-variant-numeric:tabular-nums}
+
+.track-wrap{margin-top:4px}
+.track{
+  position:relative; height:12px; border-radius:6px;
+  background:var(--surface-2); border:1px solid var(--rule); overflow:visible;
+}
+.track-fill{
+  position:absolute; inset:0 auto 0 0; border-radius:5px;
+  background:var(--accent); opacity:.85; transition:width .12s linear;
+}
+@media (prefers-reduced-motion:reduce){ .track-fill{transition:none} }
+.track-mark{
+  position:absolute; top:-6px; bottom:-6px; width:2px; background:var(--ink);
+  transform:translateX(-1px);
+}
+.track-labels{
+  position:relative; height:18px; margin-top:7px; font-size:11px;
+  color:var(--muted); font-variant-numeric:tabular-nums;
+}
+.track-labels .zero{position:absolute; left:0}
+.track-labels .end{position:absolute; right:0}
+.track-labels .at{position:absolute; transform:translateX(-50%); color:var(--ink-2); font-weight:600; white-space:nowrap}
+.be-second{
+  margin-top:18px; padding-top:14px; border-top:1px solid var(--rule);
+  font-size:13px; color:var(--ink-2); display:flex; gap:8px; flex-wrap:wrap;
+}
+.be-second b{font-weight:600; font-variant-numeric:tabular-nums}
+
+/* ---------- таблица ---------- */
+.tbl-wrap{overflow-x:auto; border:1px solid var(--rule); border-radius:10px; background:var(--surface)}
+table{border-collapse:collapse; width:100%; min-width:600px}
+caption{
+  text-align:left; padding:18px 22px 12px;
+  font-family:Spectral,Georgia,serif; font-size:19px; font-weight:600; color:var(--ink);
+}
+th{
+  font-size:10.5px; font-weight:600; text-transform:uppercase; letter-spacing:.08em;
+  color:var(--muted); text-align:right; padding:0 22px 9px;
+  border-bottom:1px solid var(--rule); white-space:nowrap;
+}
+th.l{text-align:left}
+td{padding:7px 22px; font-variant-numeric:tabular-nums; vertical-align:middle}
+td.l{text-align:left; width:100%}
+td.c{text-align:center; white-space:nowrap}
+td.r{text-align:right; white-space:nowrap; font-weight:500}
+tr.step td{
+  font-weight:700; font-size:15.5px;
+  border-top:1px solid var(--rule-strong); padding-top:11px; padding-bottom:11px;
+}
+tr.sub td{color:var(--ink-2); font-size:14px}
+tr.sub td.l{padding-left:40px}
+.no{
+  display:inline-block; width:19px; color:var(--accent-ink);
+  font-weight:700; font-variant-numeric:tabular-nums;
+}
+tr.final td{
+  border-top:2px solid var(--ink); font-size:19px; font-weight:700;
+  padding-top:15px; padding-bottom:20px;
+}
+tr.final td.r.plus{color:var(--good)}
+tr.final td.r.minus{color:var(--bad)}
+.pct{
+  font:inherit; font-size:13px; font-weight:600; font-variant-numeric:tabular-nums;
+  width:56px; text-align:right; color:var(--ink);
+  background:var(--surface-2); border:1px solid var(--rule);
+  border-radius:5px; padding:3px 6px;
+}
+.pct:focus-visible{outline:2px solid var(--accent); outline-offset:1px}
+.money{
+  font:inherit; font-size:14px; font-weight:600; font-variant-numeric:tabular-nums;
+  width:110px; text-align:right; color:var(--ink);
+  background:var(--surface-2); border:1px solid var(--rule);
+  border-radius:5px; padding:4px 8px;
+}
+.money:focus-visible{outline:2px solid var(--accent); outline-offset:1px}
+.tag{font-size:11px; color:var(--muted); margin-left:6px; font-weight:400}
+
+footer{margin-top:22px; font-size:12px; color:var(--muted); line-height:1.6}
+footer b{color:var(--ink-2); font-weight:600}
+</style>
+
+<div class="wrap">
+<header>
+  <h1>Бюджет концерта</h1>
+  <p class="sub">Двигайте количество и цену билетов, впишите технические расходы —
+     таблица пересчитывается целиком.</p>
+</header>
+
+<div class="panel">
+  <div class="ctl">
+    <div class="ctl-top">
+      <label class="ctl-label" for="qty">Продано билетов</label>
+      <span class="ctl-val" id="qtyOut">140</span>
+    </div>
+    <input type="range" id="qty" min="0" max="400" step="1" value="140">
+    <div class="scale"><span>0</span><span>400</span></div>
+  </div>
+
+  <div class="ctl">
+    <div class="ctl-top">
+      <label class="ctl-label" for="price">Цена билета</label>
+      <span class="ctl-val" id="priceOut">2 500 ₽</span>
+    </div>
+    <input type="range" id="price" min="500" max="8000" step="100" value="2500">
+    <div class="scale"><span>500 ₽</span><span>8 000 ₽</span></div>
+  </div>
+
+  <div class="ctl">
+    <div class="ctl-top">
+      <label class="ctl-label" for="tech">Технические расходы</label>
+      <span class="ctl-val" id="techOut">60 000 ₽</span>
+    </div>
+    <input class="field" type="number" id="tech" min="0" step="1000" value="60000" inputmode="numeric">
+    <p class="hint">Аренда звука и обеспечение площадки, общей суммой</p>
+  </div>
+</div>
+
+<section class="be">
+  <div class="be-head">Точка безубыточности</div>
+  <div class="be-row">
+    <span class="be-num" id="beNum">30</span>
+    <span class="be-unit" id="beUnit">билетов</span>
+    <span class="pill ok" id="bePill">Порог пройден</span>
+  </div>
+  <p class="be-note" id="beNote"></p>
+
+  <div class="track-wrap">
+    <div class="track">
+      <div class="track-fill" id="trackFill" style="width:60%"></div>
+      <div class="track-mark" id="trackMark" style="left:20%"></div>
+    </div>
+    <div class="track-labels">
+      <span class="zero">0</span>
+      <span class="at" id="markLabel" style="left:20%">порог 30</span>
+      <span class="end" id="endLabel">168</span>
+    </div>
+  </div>
+
+  <div class="be-second" id="beSecond" hidden>
+    <span>С учётом гонораров, маркетинга и прочих расходов окупаемость наступает на</span>
+    <b id="beFull">—</b>
+  </div>
+</section>
+
+<div class="tbl-wrap">
+<table>
+  <caption>Расчёт</caption>
+  <thead>
+    <tr>
+      <th class="l">Статья</th>
+      <th>Кол-во</th>
+      <th>Цена / ставка</th>
+      <th>Сумма, ₽</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr class="step">
+      <td class="l"><span class="no">1</span>ВАЛОВОЙ СБОР</td>
+      <td class="c" id="tQty">140</td>
+      <td class="c" id="tPrice">2 500 ₽</td>
+      <td class="r" id="vGross">350 000 ₽</td>
+    </tr>
+    <tr class="sub">
+      <td class="l">Комиссия за продажу билетов</td>
+      <td class="c"></td>
+      <td class="c"><input class="pct" type="number" id="rComm" min="0" max="100" step="0.5" value="5">%</td>
+      <td class="r" id="vComm"></td>
+    </tr>
+
+    <tr class="step">
+      <td class="l"><span class="no">2</span>ВЫРУЧКА ОТ ПРОДАЖИ БИЛЕТОВ</td>
+      <td class="c"></td><td class="c"></td>
+      <td class="r" id="vRev"></td>
+    </tr>
+
+    <tr class="step">
+      <td class="l"><span class="no">3</span>РАСХОДЫ ПЛОЩАДКИ</td>
+      <td class="c"></td><td class="c"></td>
+      <td class="r" id="vVenueCosts"></td>
+    </tr>
+    <tr class="sub">
+      <td class="l">Налоги УСН</td>
+      <td class="c"></td>
+      <td class="c"><input class="pct" type="number" id="rUsn" min="0" max="100" step="0.5" value="6">%</td>
+      <td class="r" id="vUsn"></td>
+    </tr>
+    <tr class="sub">
+      <td class="l">Отчисления в РАО</td>
+      <td class="c"></td>
+      <td class="c"><input class="pct" type="number" id="rRao" min="0" max="100" step="0.5" value="8">%</td>
+      <td class="r" id="vRao"></td>
+    </tr>
+    <tr class="sub">
+      <td class="l">Технические расходы <span class="tag">ползунок выше</span></td>
+      <td class="c"></td><td class="c"></td>
+      <td class="r" id="vTech"></td>
+    </tr>
+
+    <tr class="step">
+      <td class="l"><span class="no">4</span>ПРИБЫЛЬ ПЛОЩАДКИ</td>
+      <td class="c"></td><td class="c"></td>
+      <td class="r" id="vVenueProfit"></td>
+    </tr>
+    <tr class="sub">
+      <td class="l">Доля площадки</td>
+      <td class="c"></td>
+      <td class="c"><input class="pct" type="number" id="rShare" min="0" max="100" step="1" value="50">%</td>
+      <td class="r" id="vShare"></td>
+    </tr>
+
+    <tr class="step">
+      <td class="l"><span class="no">5</span>ДОХОД ОРГАНИЗАТОРА</td>
+      <td class="c"></td><td class="c"></td>
+      <td class="r" id="vOrg"></td>
+    </tr>
+    <tr class="sub">
+      <td class="l">Налоги</td>
+      <td class="c"></td>
+      <td class="c"><input class="pct" type="number" id="rTax" min="0" max="100" step="0.5" value="7">%</td>
+      <td class="r" id="vTax"></td>
+    </tr>
+    <tr class="sub">
+      <td class="l">Банковские комиссии</td>
+      <td class="c"></td>
+      <td class="c"><input class="pct" type="number" id="rBank" min="0" max="100" step="0.5" value="1">%</td>
+      <td class="r" id="vBank"></td>
+    </tr>
+
+    <tr class="step">
+      <td class="l"><span class="no">6</span>БЮДЖЕТ МЕРОПРИЯТИЯ</td>
+      <td class="c"></td><td class="c"></td>
+      <td class="r" id="vBudget"></td>
+    </tr>
+    <tr class="sub">
+      <td class="l"><label for="eFees">Гонорары</label></td>
+      <td class="c"></td><td class="c"></td>
+      <td class="r"><input class="money" type="number" id="eFees" min="0" step="1000" value="0" inputmode="numeric"></td>
+    </tr>
+    <tr class="sub">
+      <td class="l"><label for="eMkt">Маркетинг и PR</label></td>
+      <td class="c"></td><td class="c"></td>
+      <td class="r"><input class="money" type="number" id="eMkt" min="0" step="1000" value="0" inputmode="numeric"></td>
+    </tr>
+    <tr class="sub">
+      <td class="l"><label for="eOther">Прочие расходы</label></td>
+      <td class="c"></td><td class="c"></td>
+      <td class="r"><input class="money" type="number" id="eOther" min="0" step="1000" value="0" inputmode="numeric"></td>
+    </tr>
+
+    <tr class="final">
+      <td class="l"><span class="no">7</span>ЧИСТЫЙ ДОХОД ОРГАНИЗАТОРА</td>
+      <td class="c"></td><td class="c"></td>
+      <td class="r" id="vNet"></td>
+    </tr>
+  </tbody>
+</table>
+</div>
+
+<footer id="foot"></footer>
+</div>
+
+<script>
+(function(){
+  var $ = function(id){ return document.getElementById(id); };
+  var nf = new Intl.NumberFormat('ru-RU', {maximumFractionDigits:0});
+  var money = function(v){ return nf.format(Math.round(v)) + ' ₽'; };
+  var plural = function(n, a, b, c){
+    var n10 = n % 10, n100 = n % 100;
+    if(n10 === 1 && n100 !== 11) return a;
+    if(n10 >= 2 && n10 <= 4 && (n100 < 12 || n100 > 14)) return b;
+    return c;
+  };
+
+  var ids = ['qty','price','tech','rComm','rUsn','rRao','rShare','rTax','rBank','eFees','eMkt','eOther'];
+  var num = function(id){ var v = parseFloat($(id).value); return isFinite(v) ? v : 0; };
+
+  function save(){
+    try{
+      var s = {};
+      ids.forEach(function(k){ s[k] = $(k).value; });
+      localStorage.setItem('concertBudget', JSON.stringify(s));
+    }catch(e){}
+  }
+  function restore(){
+    try{
+      var raw = localStorage.getItem('concertBudget');
+      if(!raw) return;
+      var s = JSON.parse(raw);
+      ids.forEach(function(k){ if(s[k] !== undefined && s[k] !== '') $(k).value = s[k]; });
+    }catch(e){}
+  }
+
+  function render(){
+    var qty = num('qty'), price = num('price'), tech = num('tech');
+    var comm = num('rComm')/100, usn = num('rUsn')/100, rao = num('rRao')/100;
+    var share = num('rShare')/100, tax = num('rTax')/100, bank = num('rBank')/100;
+    var fees = num('eFees'), mkt = num('eMkt'), other = num('eOther');
+
+    var gross = qty * price;
+    var commSum = gross * comm;
+    var rev = gross - commSum;
+    var usnSum = rev * usn, raoSum = rev * rao;
+    var venueCosts = usnSum + raoSum + tech;
+    var venueProfit = rev - venueCosts;
+    var shareSum = venueProfit * share;
+    var org = venueProfit - shareSum;
+    var taxSum = org * tax, bankSum = org * bank;
+    var budget = org - taxSum - bankSum;
+    var net = budget - fees - mkt - other;
+
+    $('qtyOut').textContent = nf.format(qty);
+    $('priceOut').textContent = money(price);
+    $('tQty').textContent = nf.format(qty);
+    $('techOut').textContent = money(tech);
+    $('tPrice').textContent = money(price);
+
+    $('vGross').textContent = money(gross);
+    $('vComm').textContent = money(commSum);
+    $('vRev').textContent = money(rev);
+    $('vVenueCosts').textContent = money(venueCosts);
+    $('vUsn').textContent = money(usnSum);
+    $('vRao').textContent = money(raoSum);
+    $('vTech').textContent = money(tech);
+    $('vVenueProfit').textContent = money(venueProfit);
+    $('vShare').textContent = money(shareSum);
+    $('vOrg').textContent = money(org);
+    $('vTax').textContent = money(taxSum);
+    $('vBank').textContent = money(bankSum);
+    $('vBudget').textContent = money(budget);
+
+    var netCell = $('vNet');
+    netCell.textContent = money(net);
+    netCell.classList.toggle('plus', net >= 0);
+    netCell.classList.toggle('minus', net < 0);
+
+    // выручка с одного билета, доживающая до строки «Прибыль площадки»
+    var perTicket = price * (1 - comm) * (1 - usn - rao);
+    var be = perTicket > 0 ? Math.ceil(tech / perTicket) : null;
+
+    if(be === null){
+      $('beNum').textContent = '—';
+      $('beUnit').textContent = 'билет не покрывает налоги и комиссию';
+      $('bePill').hidden = true;
+      $('beNote').textContent = 'При этих ставках комиссия, УСН и РАО забирают весь билет целиком — окупить технику невозможно ни при каком количестве.';
+      $('trackFill').style.width = '0%';
+      $('trackMark').style.left = '0%';
+      $('markLabel').textContent = '';
+      $('endLabel').textContent = '';
+      $('beSecond').hidden = true;
+      $('foot').textContent = '';
+      return;
+    }
+
+    $('beNum').textContent = nf.format(be);
+    $('beUnit').textContent = plural(be, 'билет', 'билета', 'билетов');
+
+    var pill = $('bePill');
+    pill.hidden = false;
+    if(qty >= be){
+      pill.className = 'pill ok';
+      pill.textContent = 'Порог пройден: запас ' + nf.format(qty - be) + ' ' +
+                         plural(qty - be, 'билет', 'билета', 'билетов');
+    }else{
+      pill.className = 'pill no';
+      pill.textContent = 'Не хватает ' + nf.format(be - qty) + ' ' +
+                         plural(be - qty, 'билета', 'билетов', 'билетов');
+    }
+
+    $('beNote').innerHTML =
+      'Минимум билетов по цене <b>' + money(price) + '</b>, чтобы покрыть комиссию за продажу, ' +
+      'налоги УСН, отчисления в РАО и технические расходы <b>' + money(tech) + '</b> — ' +
+      'то есть выйти в ноль до бюджета мероприятия. ' +
+      'Каждый билет доносит до этой точки <b>' + money(perTicket) + '</b>.';
+
+    var top = Math.max(qty, be) * 1.15 || 1;
+    $('trackFill').style.width = Math.min(100, qty / top * 100) + '%';
+    var markPos = Math.min(100, be / top * 100);
+    $('trackMark').style.left = markPos + '%';
+    var ml = $('markLabel');
+    ml.textContent = 'порог ' + nf.format(be);
+    ml.style.left = Math.min(88, Math.max(12, markPos)) + '%';
+    $('endLabel').textContent = nf.format(Math.round(top));
+
+    var eventBudget = fees + mkt + other;
+    var second = $('beSecond');
+    if(eventBudget > 0){
+      var denom = perTicket * (1 - share) * (1 - tax - bank);
+      if(denom > 0){
+        var beFull = Math.ceil((tech * (1 - share) * (1 - tax - bank) + eventBudget) / denom);
+        second.hidden = false;
+        $('beFull').textContent = nf.format(beFull) + ' ' +
+          plural(beFull, 'билете', 'билетах', 'билетах');
+      }else{
+        second.hidden = true;
+      }
+    }else{
+      second.hidden = true;
+    }
+
+    $('foot').innerHTML =
+      'Комиссия считается от валового сбора. УСН и РАО — от выручки после комиссии. ' +
+      'Налоги и банковские комиссии — от дохода организатора. ' +
+      'Ставки в таблице можно менять.';
+  }
+
+  ids.forEach(function(k){
+    $(k).addEventListener('input', function(){ render(); save(); });
+  });
+  restore();
+  render();
+})();
+</script>
