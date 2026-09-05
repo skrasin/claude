@@ -37,7 +37,7 @@ body{
   font-family:"Golos Text","Helvetica Neue",Arial,sans-serif;
   font-size:14px; line-height:1.45; -webkit-font-smoothing:antialiased;
 }
-.wrap{max-width:880px; margin:0 auto; padding:26px 20px 48px}
+.wrap{max-width:980px; margin:0 auto; padding:26px 20px 48px}
 
 h1{
   font-family:Spectral,Georgia,serif; font-weight:600;
@@ -47,14 +47,13 @@ h1{
 
 /* ---------- компактная шапка: 4 элемента ---------- */
 .top{
-  display:grid; grid-template-columns:repeat(4,1fr); gap:10px; margin-bottom:20px;
+  display:grid; gap:9px; margin-bottom:20px;
+  grid-template-columns:repeat(auto-fit, minmax(166px, 1fr));
 }
-@media (max-width:760px){ .top{grid-template-columns:repeat(2,1fr)} }
-@media (max-width:420px){ .top{grid-template-columns:1fr} }
 
 .cell{
   background:var(--surface); border:1px solid var(--rule);
-  border-radius:8px; padding:10px 12px 11px;
+  border-radius:8px; padding:10px 11px 11px;
   display:flex; flex-direction:column; gap:5px; min-width:0;
 }
 .cell-head{display:flex; align-items:center; gap:6px; color:var(--muted)}
@@ -78,13 +77,35 @@ h1{
 .unit{font-size:14px; font-weight:500; color:var(--ink-2)}
 .cell-note{font-size:10.5px; color:var(--muted); min-height:14px}
 
-/* четвёртая ячейка — результат, не поле ввода */
-.cell.result{background:var(--accent-soft); border-color:transparent}
-.cell.result .cell-head{color:var(--accent-ink)}
+/* тонкий ползунок под числом */
+.slider{
+  -webkit-appearance:none; appearance:none; width:100%; height:14px;
+  background:transparent; cursor:pointer; margin:1px 0 0; display:block;
+}
+.slider::-webkit-slider-runnable-track{height:3px; border-radius:2px; background:var(--rule-strong)}
+.slider::-moz-range-track{height:3px; border-radius:2px; background:var(--rule-strong)}
+.slider::-webkit-slider-thumb{
+  -webkit-appearance:none; appearance:none; width:13px; height:13px; margin-top:-5px;
+  border-radius:50%; background:var(--accent); border:2px solid var(--surface);
+}
+.slider::-moz-range-thumb{
+  width:13px; height:13px; border-radius:50%; background:var(--accent);
+  border:2px solid var(--surface);
+}
+.slider:focus-visible{outline:2px solid var(--accent); outline-offset:2px; border-radius:4px}
+
+/* две правые ячейки — результаты, а не поля ввода */
+.cell.result{border-color:transparent}
 .cell.result .big{
-  font-family:Spectral,Georgia,serif; font-weight:600; font-size:26px; line-height:1;
+  font-family:Spectral,Georgia,serif; font-weight:600; font-size:21px; line-height:1.1;
   font-variant-numeric:tabular-nums; letter-spacing:-.01em;
 }
+.cell.be{background:var(--accent-soft)}
+.cell.be .cell-head{color:var(--accent-ink)}
+.cell.net.plus{background:var(--good-soft)}
+.cell.net.plus .cell-head, .cell.net.plus .big{color:var(--good)}
+.cell.net.minus{background:var(--bad-soft)}
+.cell.net.minus .cell-head, .cell.net.minus .big{color:var(--bad)}
 .status{
   display:inline-flex; align-items:center; gap:5px;
   font-size:10.5px; font-weight:600; white-space:nowrap;
@@ -144,6 +165,8 @@ footer{margin-top:16px; font-size:11.5px; color:var(--muted); line-height:1.6; m
     <div class="cell-val">
       <input class="num" id="qty" type="number" min="0" step="1" value="140" inputmode="numeric">
     </div>
+    <input class="slider" id="qtyRange" type="range" min="0" max="400" step="1" value="140"
+           aria-label="Продано билетов">
     <div class="cell-note" id="capNote"></div>
   </div>
 
@@ -156,6 +179,8 @@ footer{margin-top:16px; font-size:11.5px; color:var(--muted); line-height:1.6; m
       <input class="num" id="price" type="number" min="0" step="100" value="2500" inputmode="numeric">
       <span class="unit">₽</span>
     </div>
+    <input class="slider" id="priceRange" type="range" min="0" max="8000" step="100" value="2500"
+           aria-label="Цена билета">
     <div class="cell-note" id="priceNote"></div>
   </div>
 
@@ -171,7 +196,7 @@ footer{margin-top:16px; font-size:11.5px; color:var(--muted); line-height:1.6; m
     <div class="cell-note">Звук и обеспечение площадки</div>
   </div>
 
-  <div class="cell result">
+  <div class="cell result be">
     <div class="cell-head">
       <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="3.6"/><path d="M12 1.5v3M12 19.5v3M1.5 12h3M19.5 12h3"/></svg>
       <span class="cell-label">Безубыточность</span>
@@ -183,6 +208,17 @@ footer{margin-top:16px; font-size:11.5px; color:var(--muted); line-height:1.6; m
     <div class="cell-note">
       <span class="status ok" id="beStatus"><span class="dot"></span><span id="beStatusText">запас 110</span></span>
     </div>
+  </div>
+
+  <div class="cell result net plus" id="netCell">
+    <div class="cell-head">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7.5A2.5 2.5 0 0 1 5.5 5H18a2 2 0 0 1 2 2v1"/><path d="M3 7.5V17a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-2.5"/><path d="M21 8.5v6h-4.2a3 3 0 0 1 0-6z"/></svg>
+      <span class="cell-label">Чистый доход организатора</span>
+    </div>
+    <div class="cell-val">
+      <span class="big" id="netTop">—</span>
+    </div>
+    <div class="cell-note" id="netNote"></div>
   </div>
 </div>
 
@@ -232,6 +268,11 @@ footer{margin-top:16px; font-size:11.5px; color:var(--muted); line-height:1.6; m
       <td class="c"></td>
       <td class="c"><input class="pct" type="number" id="rRao" min="0" max="100" step="0.5" value="8">%</td>
       <td class="r" id="vRao"></td>
+    </tr>
+    <tr class="sub">
+      <td class="l">Технические расходы</td>
+      <td class="c"></td><td class="c"></td>
+      <td class="r" id="vTech"></td>
     </tr>
 
     <tr class="step">
@@ -357,6 +398,7 @@ footer{margin-top:16px; font-size:11.5px; color:var(--muted); line-height:1.6; m
     $('vVenueCosts').textContent = money(venueCosts);
     $('vUsn').textContent = money(usnSum);
     $('vRao').textContent = money(raoSum);
+    $('vTech').textContent = money(tech);
     $('vVenueProfit').textContent = money(venueProfit);
     $('vShare').textContent = money(shareSum);
     $('vOrg').textContent = money(org);
@@ -368,6 +410,14 @@ footer{margin-top:16px; font-size:11.5px; color:var(--muted); line-height:1.6; m
     netCell.textContent = money(net);
     netCell.classList.toggle('plus', net >= 0);
     netCell.classList.toggle('minus', net < 0);
+
+    $('netTop').textContent = money(net);
+    var netTile = $('netCell');
+    netTile.classList.toggle('plus', net >= 0);
+    netTile.classList.toggle('minus', net < 0);
+    $('netNote').textContent = net >= 0
+      ? nf.format(Math.round(net / (qty || 1))) + ' ₽ с билета'
+      : 'убыток';
 
     $('capNote').textContent = 'сбор ' + money(gross);
     $('priceNote').textContent = money(price * (1 - comm) * (1 - usn - rao)) + ' доходит до прибыли';
@@ -415,10 +465,33 @@ footer{margin-top:16px; font-size:11.5px; color:var(--muted); line-height:1.6; m
       'налоги и банковские комиссии — от дохода организатора. Все ставки в таблице редактируются.';
   }
 
+  // ползунок и число — одна величина, синхронизируются в обе стороны;
+  // если введено число вне шкалы, ползунок растягивается до него
+  [['qty','qtyRange'], ['price','priceRange']].forEach(function(pair){
+    var box = $(pair[0]), sl = $(pair[1]);
+    sl.addEventListener('input', function(){
+      box.value = sl.value; render(); save();
+    });
+    box.addEventListener('input', function(){
+      var v = parseFloat(box.value);
+      if(isFinite(v)){
+        if(v > parseFloat(sl.max)) sl.max = String(v);
+        sl.value = String(Math.max(parseFloat(sl.min), v));
+      }
+    });
+  });
+
   ids.forEach(function(k){
     $(k).addEventListener('input', function(){ render(); save(); });
   });
   restore();
+  [['qty','qtyRange'], ['price','priceRange']].forEach(function(pair){
+    var v = parseFloat($(pair[0]).value), sl = $(pair[1]);
+    if(isFinite(v)){
+      if(v > parseFloat(sl.max)) sl.max = String(v);
+      sl.value = String(Math.max(parseFloat(sl.min), v));
+    }
+  });
   render();
 })();
 </script>
