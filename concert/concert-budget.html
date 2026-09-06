@@ -157,6 +157,45 @@ tr.final td.r.minus{color:var(--bad)}
 .pct:focus-visible,.money:focus-visible{outline:2px solid var(--accent); outline-offset:1px}
 
 footer{margin-top:10px; font-size:11.5px; color:var(--muted); line-height:1.5}
+
+/* ---------- телефон ---------- */
+@media (max-width:560px){
+  .wrap{padding:12px 10px 16px}
+  h1{font-size:17px; margin-bottom:8px}
+
+  .top{gap:6px; margin-bottom:10px; grid-template-columns:repeat(auto-fit, minmax(146px, 1fr))}
+  /* итог занимает всю строку, а не половину с пустотой рядом */
+  .cell.net{grid-column:1 / -1}
+  .cell.net .cell-val{margin-top:1px}
+  .cell{padding:7px 9px 8px}
+  .num{font-size:17px}
+  .cell.result .big{font-size:17px}
+
+  /* таблица целиком по ширине экрана, без горизонтальной прокрутки */
+  table{min-width:0}
+  th, td{padding-left:7px; padding-right:7px}
+  th{font-size:9px; letter-spacing:.03em; padding-top:7px}
+  td.l{padding-left:5px}
+  tr.sub td.l{padding-left:15px}
+  tr.step td{font-size:11.5px; line-height:1.25}
+  tr.sub td{font-size:11px; line-height:1.25}
+  tr.final td{font-size:13.5px; padding-top:7px; padding-bottom:8px}
+  td.r{font-weight:600}
+
+  /* «Кол-во» уходит: 140 и цена и так стоят в шапке страницы */
+  th.qty, td.qty{display:none}
+
+  .pct{width:38px; font-size:11px; padding:1px 4px}
+  .money{width:70px; font-size:11px; padding:1px 5px}
+  footer{font-size:10.5px; margin-top:8px}
+}
+
+@media (max-width:380px){
+  .wrap{padding:10px 8px 14px}
+  th, td{padding-left:6px; padding-right:6px}
+  tr.sub td.l{padding-left:12px}
+  .money{width:64px}
+}
 </style>
 
 <div class="wrap">
@@ -234,8 +273,8 @@ footer{margin-top:10px; font-size:11.5px; color:var(--muted); line-height:1.5}
     <tr>
       <th class="n">№</th>
       <th class="l">Статья</th>
-      <th>Кол-во</th>
-      <th>Цена / ставка</th>
+      <th class="qty">Кол-во</th>
+      <th class="rate">Цена / ставка</th>
       <th>Сумма, ₽</th>
     </tr>
   </thead>
@@ -243,120 +282,120 @@ footer{margin-top:10px; font-size:11.5px; color:var(--muted); line-height:1.5}
     <tr class="step">
       <td class="n">1</td>
       <td class="l">ВАЛОВОЙ СБОР</td>
-      <td class="c"><span id="tQty">140</span></td>
-      <td class="c"><span id="tPrice">2 500 ₽</span></td>
+      <td class="c qty"><span id="tQty">140</span></td>
+      <td class="c rate"><span id="tPrice">2 500 ₽</span></td>
       <td class="r" id="vGross"></td>
     </tr>
     <tr class="sub">
       <td class="n"></td>
       <td class="l">Комиссия за продажу билетов</td>
-      <td class="c"></td>
-      <td class="c"><input class="pct" type="number" id="rComm" min="0" max="100" step="0.5" value="5">%</td>
+      <td class="c qty"></td>
+      <td class="c rate"><input class="pct" type="number" id="rComm" min="0" max="100" step="0.5" value="5">%</td>
       <td class="r" id="vComm"></td>
     </tr>
     <tr class="step">
       <td class="n">2</td>
       <td class="l">ВЫРУЧКА ОТ ПРОДАЖИ БИЛЕТОВ</td>
-      <td class="c"></td>
-      <td class="c"></td>
+      <td class="c qty"></td>
+      <td class="c rate"></td>
       <td class="r" id="vRev"></td>
     </tr>
     <tr class="step">
       <td class="n">3</td>
       <td class="l">РАСХОДЫ ПЛОЩАДКИ</td>
-      <td class="c"></td>
-      <td class="c"></td>
+      <td class="c qty"></td>
+      <td class="c rate"></td>
       <td class="r" id="vVenueCosts"></td>
     </tr>
     <tr class="sub">
       <td class="n"></td>
       <td class="l">Налоги УСН</td>
-      <td class="c"></td>
-      <td class="c"><input class="pct" type="number" id="rUsn" min="0" max="100" step="0.5" value="6">%</td>
+      <td class="c qty"></td>
+      <td class="c rate"><input class="pct" type="number" id="rUsn" min="0" max="100" step="0.5" value="6">%</td>
       <td class="r" id="vUsn"></td>
     </tr>
     <tr class="sub">
       <td class="n"></td>
       <td class="l">Отчисления в РАО</td>
-      <td class="c"></td>
-      <td class="c"><input class="pct" type="number" id="rRao" min="0" max="100" step="0.5" value="8">%</td>
+      <td class="c qty"></td>
+      <td class="c rate"><input class="pct" type="number" id="rRao" min="0" max="100" step="0.5" value="8">%</td>
       <td class="r" id="vRao"></td>
     </tr>
     <tr class="sub">
       <td class="n"></td>
       <td class="l">Технические расходы</td>
-      <td class="c"></td>
-      <td class="c"></td>
+      <td class="c qty"></td>
+      <td class="c rate"></td>
       <td class="r" id="vTech"></td>
     </tr>
     <tr class="step">
       <td class="n">4</td>
       <td class="l">ПРИБЫЛЬ ПЛОЩАДКИ</td>
-      <td class="c"></td>
-      <td class="c"></td>
+      <td class="c qty"></td>
+      <td class="c rate"></td>
       <td class="r" id="vVenueProfit"></td>
     </tr>
     <tr class="sub">
       <td class="n"></td>
       <td class="l">Доля площадки</td>
-      <td class="c"></td>
-      <td class="c"><input class="pct" type="number" id="rShare" min="0" max="100" step="1" value="50">%</td>
+      <td class="c qty"></td>
+      <td class="c rate"><input class="pct" type="number" id="rShare" min="0" max="100" step="1" value="50">%</td>
       <td class="r" id="vShare"></td>
     </tr>
     <tr class="step">
       <td class="n">5</td>
       <td class="l">ДОХОД ОРГАНИЗАТОРА</td>
-      <td class="c"></td>
-      <td class="c"></td>
+      <td class="c qty"></td>
+      <td class="c rate"></td>
       <td class="r" id="vOrg"></td>
     </tr>
     <tr class="sub">
       <td class="n"></td>
       <td class="l">Налоги</td>
-      <td class="c"></td>
-      <td class="c"><input class="pct" type="number" id="rTax" min="0" max="100" step="0.5" value="7">%</td>
+      <td class="c qty"></td>
+      <td class="c rate"><input class="pct" type="number" id="rTax" min="0" max="100" step="0.5" value="7">%</td>
       <td class="r" id="vTax"></td>
     </tr>
     <tr class="sub">
       <td class="n"></td>
       <td class="l">Банковские комиссии</td>
-      <td class="c"></td>
-      <td class="c"><input class="pct" type="number" id="rBank" min="0" max="100" step="0.5" value="1">%</td>
+      <td class="c qty"></td>
+      <td class="c rate"><input class="pct" type="number" id="rBank" min="0" max="100" step="0.5" value="1">%</td>
       <td class="r" id="vBank"></td>
     </tr>
     <tr class="step">
       <td class="n">6</td>
       <td class="l">БЮДЖЕТ МЕРОПРИЯТИЯ</td>
-      <td class="c"></td>
-      <td class="c"></td>
+      <td class="c qty"></td>
+      <td class="c rate"></td>
       <td class="r" id="vBudget"></td>
     </tr>
     <tr class="sub">
       <td class="n"></td>
       <td class="l"><label for="eFees">Гонорары</label></td>
-      <td class="c"></td>
-      <td class="c"></td>
+      <td class="c qty"></td>
+      <td class="c rate"></td>
       <td class="r"><input class="money" type="number" id="eFees" min="0" step="1000" value="0" inputmode="numeric"></td>
     </tr>
     <tr class="sub">
       <td class="n"></td>
       <td class="l"><label for="eMkt">Маркетинг и PR</label></td>
-      <td class="c"></td>
-      <td class="c"></td>
+      <td class="c qty"></td>
+      <td class="c rate"></td>
       <td class="r"><input class="money" type="number" id="eMkt" min="0" step="1000" value="0" inputmode="numeric"></td>
     </tr>
     <tr class="sub">
       <td class="n"></td>
       <td class="l"><label for="eOther">Прочие расходы</label></td>
-      <td class="c"></td>
-      <td class="c"></td>
+      <td class="c qty"></td>
+      <td class="c rate"></td>
       <td class="r"><input class="money" type="number" id="eOther" min="0" step="1000" value="0" inputmode="numeric"></td>
     </tr>
     <tr class="final">
       <td class="n">7</td>
       <td class="l">ЧИСТЫЙ ДОХОД ОРГАНИЗАТОРА</td>
-      <td class="c"></td>
-      <td class="c"></td>
+      <td class="c qty"></td>
+      <td class="c rate"></td>
       <td class="r" id="vNet"></td>
     </tr>
   </tbody>
