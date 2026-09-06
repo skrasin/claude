@@ -1,7 +1,7 @@
 <title>Бюджет концерта</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Spectral:wght@500;600&family=Golos+Text:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Spectral:wght@400;500;600;700&display=swap">
 <style>
 :root{
   --paper:#EDEFF3; --surface:#FFFFFF; --surface-2:#F5F7FA;
@@ -34,13 +34,13 @@
 [hidden]{display:none!important}
 body{
   background:var(--paper); color:var(--ink);
-  font-family:"Golos Text","Helvetica Neue",Arial,sans-serif;
-  font-size:13px; line-height:1.4; -webkit-font-smoothing:antialiased;
+  font-family:Spectral,Georgia,"Times New Roman",serif;
+  font-size:13.5px; line-height:1.4; -webkit-font-smoothing:antialiased;
 }
 .wrap{max-width:980px; margin:0 auto; padding:16px 18px 18px}
 
 h1{
-  font-family:Spectral,Georgia,serif; font-weight:600;
+  font-weight:600;
   font-size:19px; line-height:1.1; letter-spacing:-.01em;
   margin:0 0 10px; text-wrap:balance;
 }
@@ -60,7 +60,7 @@ h1{
 .cell-head svg{width:14px; height:14px; flex:none; stroke:currentColor; fill:none;
   stroke-width:1.6; stroke-linecap:round; stroke-linejoin:round}
 .cell-label{
-  font-size:9.5px; font-weight:600; text-transform:uppercase; letter-spacing:.07em;
+  font-size:10px; font-weight:600; text-transform:uppercase; letter-spacing:.06em;
   line-height:1.25;
 }
 .cell-head{align-items:flex-start}
@@ -77,7 +77,7 @@ h1{
 .num:focus{outline:none; border-bottom:1px solid var(--accent); background:var(--surface-2)}
 .num:focus-visible{outline:2px solid var(--accent); outline-offset:3px; border-radius:3px}
 .unit{font-size:12.5px; font-weight:500; color:var(--ink-2)}
-.cell-note{font-size:10px; color:var(--muted); min-height:13px; line-height:1.3}
+.cell-note{font-size:10.5px; color:var(--muted); min-height:13px; line-height:1.3}
 
 /* тонкий ползунок под числом */
 .slider{
@@ -99,7 +99,7 @@ h1{
 /* две правые ячейки — результаты, а не поля ввода */
 .cell.result{border-color:transparent}
 .cell.result .big{
-  font-family:Spectral,Georgia,serif; font-weight:600; font-size:18px; line-height:1.15;
+  font-weight:600; font-size:18px; line-height:1.15;
   font-variant-numeric:tabular-nums; letter-spacing:-.01em;
 }
 .cell.be{background:var(--accent-soft)}
@@ -119,7 +119,7 @@ h1{
 .tbl-wrap{overflow-x:auto; border:1px solid var(--rule); border-radius:9px; background:var(--surface)}
 table{border-collapse:collapse; width:100%; min-width:560px}
 th{
-  font-size:9.5px; font-weight:600; text-transform:uppercase; letter-spacing:.07em;
+  font-size:10px; font-weight:600; text-transform:uppercase; letter-spacing:.06em;
   color:var(--muted); text-align:right; padding:8px 16px 6px;
   border-bottom:1px solid var(--rule); white-space:nowrap;
 }
@@ -152,7 +152,7 @@ tr.final td.r.minus{color:var(--bad)}
 .money{font-size:12.5px; width:94px; padding:2px 7px}
 .pct:focus-visible,.money:focus-visible{outline:2px solid var(--accent); outline-offset:1px}
 
-footer{margin-top:10px; font-size:11px; color:var(--muted); line-height:1.5}
+footer{margin-top:10px; font-size:11.5px; color:var(--muted); line-height:1.5}
 </style>
 
 <div class="wrap">
