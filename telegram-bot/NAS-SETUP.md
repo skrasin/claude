@@ -60,20 +60,34 @@
 - **Сценарий:**
   ```bash
   cd /volume1/homes/fancymusic/bot
+  export PYTHONUNBUFFERED=1
   {
     date
-    pkill -f "listener/[l]istener.py"
-    sleep 3
+    echo "1. останавливаю бота"
+    pid=$(cat listener/listener.lock 2>/dev/null)
+    if [ -n "$pid" ] && grep -q listener "/proc/$pid/cmdline" 2>/dev/null; then
+      kill "$pid"; sleep 5; kill -9 "$pid" 2>/dev/null; echo "   остановлен (pid $pid)"
+    else
+      echo "   бот не был запущен"
+    fi
+    echo "2. проверяю туннель"
     python3 vpn/awg_setup.py ensure
     python3 vpn/awg_setup.py status
-    echo "--- сообщение, которое придёт в 20:00:"
+    echo "3. сообщение, которое придёт в 20:00:"
     python3 rea-schedule/from_file.py
+    echo "4. запускаю бота"
     nohup python3 listener/listener.py >/dev/null 2>&1 &
+    sleep 3
+    echo "   pid: $(cat listener/listener.lock)"
     echo "=== ГОТОВО ==="
   } > update.log 2>&1
   ```
-**ОК** → выделить → **Выполнить**. Через полминуты открыть `home/bot/update.log`:
-должно быть «Telegram через туннель: доступен», текст сообщения на завтра и `=== ГОТОВО ===`.
+  Бот останавливается по номеру процесса из `listener/listener.lock`. **Не используйте
+  `pkill -f …listener.py` в задачах Планировщика:** DSM передаёт весь текст сценария одной
+  командой, и `pkill` находит и убивает саму задачу (в тексте ниже есть строка запуска бота).
+
+**ОК** → выделить → **Выполнить**. Через 1–2 минуты открыть `home/bot/update.log`:
+должно быть «Telegram через туннель: доступен», текст сообщения на завтра, новый pid и `=== ГОТОВО ===`.
 
 ## Шаг 6. Проверить в Telegram
 | Команда | Ожидаемый ответ |
