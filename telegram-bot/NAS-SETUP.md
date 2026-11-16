@@ -62,7 +62,7 @@
   cd /volume1/homes/fancymusic/bot
   {
     date
-    pkill -f listener/listener.py
+    pkill -f "listener/[l]istener.py"
     sleep 3
     python3 vpn/awg_setup.py ensure
     python3 vpn/awg_setup.py status
