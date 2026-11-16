@@ -13,3 +13,4 @@ vpn/*.tar.gz
 vpn/*.conf
 vpn/*.pid
 vpn/*.old
+rea-schedule/probe.log
