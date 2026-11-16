@@ -1,0 +1,9 @@
+config.json
+data/
+**/state.json
+**/state.json.tmp
+**/*.lock
+**/*.log
+**/*.log.*
+**/dump.html
+__pycache__/
