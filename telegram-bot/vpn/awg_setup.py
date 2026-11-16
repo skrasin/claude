@@ -11,6 +11,7 @@
     python3 vpn/awg_setup.py start       # запустить, если не запущен (для Планировщика)
     python3 vpn/awg_setup.py stop
     python3 vpn/awg_setup.py status      # работает ли прокси и виден ли через него Telegram
+    python3 vpn/awg_setup.py ensure      # для Планировщика: поднять или перезапустить, если завис
 
 Программа: https://github.com/bropines/awg-wireproxy (ISC). Ключи из .conf скрипт не печатает.
 """
@@ -248,9 +249,27 @@ def cmd_status():
         print("Telegram через туннель: НЕДОСТУПЕН ({})\n{}".format(getattr(e, "reason", e), _log_tail()))
 
 
+def cmd_ensure():
+    """Для Планировщика: не запущен — запустить; запущен, но Telegram не открывается — перезапустить."""
+    if not _running_pid():
+        print(time.strftime("%Y-%m-%d %H:%M:%S") + " wireproxy не работал — запускаю")
+        cmd_start()
+        return
+    for attempt in range(2):
+        try:
+            check_telegram()
+            return  # всё в порядке, молчим
+        except Exception as e:
+            err = getattr(e, "reason", e)
+            time.sleep(10)
+    print("{} туннель завис ({}) — перезапускаю".format(time.strftime("%Y-%m-%d %H:%M:%S"), err))
+    cmd_stop(quiet=True)
+    cmd_start()
+
+
 def main():
     cmds = {"install": cmd_install, "configure": cmd_configure, "start": cmd_start,
-            "stop": cmd_stop, "status": cmd_status}
+            "stop": cmd_stop, "status": cmd_status, "ensure": cmd_ensure}
     if len(sys.argv) != 2 or sys.argv[1] not in cmds:
         sys.exit(__doc__)
     cmds[sys.argv[1]]()

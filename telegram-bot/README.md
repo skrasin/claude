@@ -76,10 +76,14 @@ DSM → Панель управления → Планировщик задач 
 
 - Общие: пользователь `fancymusic`
 - Расписание: ежедневно, **каждые 10 минут**, с 00:00 до 23:50
-- Сценарий:
+- Сценарий (VPN-туннель + приёмник):
   ```bash
-  cd /volume1/homes/fancymusic/bot && nohup python3 listener/listener.py >/dev/null 2>&1 &
+  cd /volume1/homes/fancymusic/bot
+  python3 vpn/awg_setup.py ensure >> vpn/ensure.log 2>&1
+  nohup python3 listener/listener.py >/dev/null 2>&1 &
   ```
+  `ensure` поднимает wireproxy, если он упал, и перезапускает, если Telegram через него
+  не открывается; в `vpn/ensure.log` пишется только когда что-то чинилось.
 
 Если приёмник уже работает, новый экземпляр сразу выходит. Если упал или NAS
 перезагрузился, через ≤10 минут поднимется снова. Отдельная задача «при загрузке» не нужна.
