@@ -91,15 +91,10 @@ GitHub Actions, облачные задачи Claude и прочие заруб�
 **Статус:** разбор проверен только на тестовой странице, собранной по скриншотам.
 С настоящим ответом сайта он ещё не сверялся.
 
-**Следующие шаги (когда владелец дома):**
-```bash
-ssh nas 'mkdir -p ~/rea-schedule-bot && python3 --version'
-scp schedule_bot.py config.json nas:rea-schedule-bot/
-ssh nas 'chmod 600 ~/rea-schedule-bot/config.json && cd ~/rea-schedule-bot && python3 schedule_bot.py --ping && python3 schedule_bot.py --dump'
-```
-Затем задача в Планировщике: ежедневно 20:00, пользователь `fancymusic`,
-`python3 /volume1/homes/fancymusic/rea-schedule-bot/schedule_bot.py`.
-Если результат кривой, скачать `dump.html` (`scp nas:rea-schedule-bot/dump.html .`) и отдать Claude.
+**Установка:** через веб-DSM (File Station + Планировщик), папка `~/bot/rea-schedule/`,
+задача `rea-schedule` ежедневно 20:00:
+`cd /volume1/homes/fancymusic/bot && python3 rea-schedule/schedule_bot.py`.
+Если результат кривой — `rea-schedule/dump.html` (после `--dump`) отдать Claude.
 
 ---
 
