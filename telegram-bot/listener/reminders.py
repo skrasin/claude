@@ -32,15 +32,22 @@ BOT_DIR = os.path.dirname(HERE)
 # Сборщики текста: имя -> (файл относительно ~/bot, функция(now) -> str)
 BUILDERS = {
     "rea_timetable": ("rea-schedule/from_file.py", "build"),
+    "rea_exams": ("rea-schedule/from_file.py", "build_exams"),  # может вернуть None — тогда молчим
 }
+
+
+def load_module(rel):
+    """Загрузить файл задачи (папки вида rea-schedule — не пакеты Python)."""
+    name = "task_" + rel.replace("/", "_").replace("-", "_").replace(".py", "")
+    spec = importlib.util.spec_from_file_location(name, os.path.join(BOT_DIR, rel))
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
 
 
 def _build(name, now):
     rel, func = BUILDERS[name]
-    spec = importlib.util.spec_from_file_location("builder_" + name, os.path.join(BOT_DIR, rel))
-    mod = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(mod)
-    return getattr(mod, func)(now)
+    return getattr(load_module(rel), func)(now)
 
 
 def load():
@@ -79,6 +86,8 @@ def check(bot, state, now=None):
         except Exception as e:
             text = "⚠️ Напоминание «{}» не собралось: <code>{}</code>".format(
                 tg.esc(rem["id"]), tg.esc("{}: {}".format(type(e).__name__, e)))
+        if not text:
+            continue
         for chat_id in rem.get("to") or [bot.owner]:
             bot.send(text, chat_id=chat_id)
     return changed
@@ -91,7 +100,9 @@ def describe():
     out = ["<b>Напоминания</b>"]
     for r in items:
         days = ", ".join(r.get("days") or ["каждый день"])
-        first = ("расписание на завтра из файла ({})".format(tg.esc(r["builder"]))
+        names = {"rea_timetable": "расписание на завтра из файла",
+                 "rea_exams": "зачёты через 7 и 3 дня (если есть)"}
+        first = (tg.esc(names.get(r["builder"], r["builder"]))
                  if r.get("builder") else r["text"].split("\n")[0])
         out.append("{} ({}): {}".format(tg.esc(r["time"]), tg.esc(days), first))
     return "\n".join(out)

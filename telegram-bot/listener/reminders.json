@@ -12,5 +12,12 @@
     ],
     "enabled": true,
     "builder": "rea_timetable"
+  },
+  {
+    "id": "rea-exams",
+    "time": "10:00",
+    "days": [],
+    "builder": "rea_exams",
+    "enabled": true
   }
 ]

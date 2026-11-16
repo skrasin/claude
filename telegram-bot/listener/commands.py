@@ -105,6 +105,11 @@ def cmd_reminders(ctx, args):
     return reminders.describe()
 
 
+def cmd_exams(ctx, args):
+    from listener import reminders
+    return reminders.load_module("rea-schedule/from_file.py").list_exams()
+
+
 # имя: (функция, описание, только_для_владельца)
 COMMANDS = {
     "start": (cmd_help, "список команд", False),
@@ -114,4 +119,5 @@ COMMANDS = {
     "status": (cmd_status, "состояние NAS", True),
     "inbox": (cmd_inbox, "последние сохранённые сообщения: /inbox 10", True),
     "reminders": (cmd_reminders, "список напоминаний", True),
+    "exams": (cmd_exams, "предстоящие зачёты дочери", True),
 }
