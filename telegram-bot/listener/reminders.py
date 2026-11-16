@@ -32,7 +32,6 @@ BOT_DIR = os.path.dirname(HERE)
 # Сборщики текста: имя -> (файл относительно ~/bot, функция(now) -> str)
 BUILDERS = {
     "rea_timetable": ("rea-schedule/from_file.py", "build"),
-    "rea_exams": ("rea-schedule/from_file.py", "build_exams"),  # может вернуть None — тогда молчим
 }
 
 
@@ -101,7 +100,7 @@ def describe():
     for r in items:
         days = ", ".join(r.get("days") or ["каждый день"])
         names = {"rea_timetable": "расписание на завтра из файла",
-                 "rea_exams": "зачёты через 7 и 3 дня (если есть)"}
+                 }
         first = (tg.esc(names.get(r["builder"], r["builder"]))
                  if r.get("builder") else r["text"].split("\n")[0])
         out.append("{} ({}): {}".format(tg.esc(r["time"]), tg.esc(days), first))

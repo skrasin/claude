@@ -6,7 +6,7 @@
 
     python3 rea-schedule/from_file.py                  # показать сообщение на завтра
     python3 rea-schedule/from_file.py --date 2026-11-17
-    python3 rea-schedule/from_file.py --exams [2026-11-19]   # напоминание о зачётах + список
+    python3 rea-schedule/from_file.py --exams [2026-11-19]   # список предстоящих зачётов
 """
 
 import datetime as dt
@@ -21,7 +21,7 @@ import schedule_bot as sb  # noqa: E402  (формат сообщения — о
 
 MSK = dt.timezone(dt.timedelta(hours=3))
 WARN_DAYS = 3  # за сколько дней до конца данных просить новые скриншоты
-EXAM_NOTICE_DAYS = (7, 3)  # за сколько дней напоминать о зачётах (накануне — в вечернем расписании)
+EXAM_HORIZON = 7  # за сколько дней до зачёта начинать обратный отсчёт в вечернем сообщении
 EXAM_WORDS = ("зачет", "зачёт", "экзамен")
 
 
@@ -69,6 +69,9 @@ def build_for(target, today):
                     last.strftime("%d.%m") if last else "—"))
     lessons = [dict(l, kind="🎓 " + l["kind"]) if is_exam(l) else l for l in days[target]]
     text = sb.format_message(target, lessons)
+    countdown = exam_countdown(days, today)
+    if countdown:
+        text += "\n\n" + countdown
     if last and (last - today).days <= WARN_DAYS:
         text += "\n\n⏳ Расписание в файле заканчивается {} — пришлите новые скриншоты.".format(
             last.strftime("%d.%m"))
@@ -84,21 +87,29 @@ def upcoming_exams(today):
     return [(d, l) for d in sorted(days) if d >= today for l in days[d] if is_exam(l)]
 
 
-def build_exams(now=None):
-    """Напоминание о зачётах через 7 и 3 дня. None — сегодня напоминать не о чем."""
-    today = (now or dt.datetime.now(MSK)).date()
-    blocks = []
-    for n in EXAM_NOTICE_DAYS:
-        d = today + dt.timedelta(days=n)
-        items = [l for (dd, l) in upcoming_exams(d) if dd == d]
-        if items:
-            word = "зачёты" if len(items) > 1 else "зачёт"
-            lines = ["🎓 <b>Через {} дн. {}</b> — {}".format(n, word, _when(d))]
-            for l in items:
-                lines.append("• {} {} <i>({})</i>".format(l["start"], sb.html.escape(l["subject"]),
-                                                          sb.html.escape(l["kind"])))
-            blocks.append("\n".join(lines))
-    return "\n\n".join(blocks) or None
+def _in_days(n):
+    if n == 1:
+        return "завтра"
+    if n % 10 == 1 and n % 100 != 11:
+        w = "день"
+    elif n % 10 in (2, 3, 4) and n % 100 not in (12, 13, 14):
+        w = "дня"
+    else:
+        w = "дней"
+    return "через {} {}".format(n, w)
+
+
+def exam_countdown(days, today):
+    """Блок «🎓 Зачёты» для вечернего сообщения: всё, что через 1…EXAM_HORIZON дней."""
+    lines = []
+    for d in sorted(days):
+        left = (d - today).days
+        if 1 <= left <= EXAM_HORIZON:
+            for l in days[d]:
+                if is_exam(l):
+                    lines.append("• {} {} — {}".format(
+                        d.strftime("%d.%m"), sb.html.escape(l["subject"]), _in_days(left)))
+    return "🎓 <b>Зачёты:</b>\n" + "\n".join(lines) if lines else ""
 
 
 def list_exams(today=None):
@@ -111,15 +122,13 @@ def list_exams(today=None):
         left = (d - today).days
         out.append("<b>{}</b> {} {} <i>({})</i> — {}".format(
             _when(d), l["start"], sb.html.escape(l["subject"]), sb.html.escape(l["kind"]),
-            "сегодня" if left == 0 else "через {} дн.".format(left)))
+            "сегодня" if left == 0 else _in_days(left)))
     return "\n".join(out)
 
 
 if __name__ == "__main__":
     if len(sys.argv) >= 2 and sys.argv[1] == "--exams":
         day = dt.date.fromisoformat(sys.argv[2]) if len(sys.argv) == 3 else dt.datetime.now(MSK).date()
-        print(build_exams(dt.datetime(day.year, day.month, day.day, 10, tzinfo=MSK)) or "(сегодня напоминаний нет)")
-        print()
         print(list_exams(day))
     elif len(sys.argv) == 3 and sys.argv[1] == "--date":
         t = dt.date.fromisoformat(sys.argv[2])
