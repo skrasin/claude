@@ -9,6 +9,7 @@
 Запуск:
   python3 listener/listener.py          # работать постоянно (для Планировщика)
   python3 listener/listener.py --once   # обработать накопившееся и выйти (проверка)
+  python3 listener/listener.py --stop   # остановить работающий приёмник
 
 Второй экземпляр сразу выходит (блокировка listener.lock), поэтому задачу в
 Планировщике можно запускать хоть каждые 10 минут: это заодно и «перезапуск, если упал».
@@ -286,20 +287,73 @@ class Listener:
         return 0
 
 
+def find_running():
+    """pid процессов приёмника: python, первый аргумент которого — …/listener/listener.py.
+
+    Сверяется именно список аргументов, а не строка целиком: так не находятся оболочки
+    (например, задача Планировщика DSM, в тексте которой есть строка запуска бота).
+    """
+    me = os.getpid()
+    found = []
+    for name in os.listdir("/proc"):
+        if not name.isdigit() or int(name) == me:
+            continue
+        try:
+            with open("/proc/{}/cmdline".format(name), "rb") as f:
+                argv = f.read().split(b"\0")
+        except OSError:
+            continue
+        if (len(argv) >= 2 and b"python" in os.path.basename(argv[0])
+                and argv[1].endswith(b"listener/listener.py")):
+            found.append(int(name))
+    return found
+
+
+def stop_running():
+    pids = find_running()
+    if not pids:
+        print("бот не был запущен")
+        return 0
+    for pid in pids:
+        try:
+            os.kill(pid, signal.SIGTERM)
+        except OSError:
+            pass
+    for _ in range(20):  # до 10 с на аккуратное завершение
+        time.sleep(0.5)
+        if not any(os.path.exists("/proc/{}".format(p)) for p in pids):
+            break
+    else:
+        for pid in pids:
+            try:
+                os.kill(pid, signal.SIGKILL)
+            except OSError:
+                pass
+        time.sleep(1)
+    print("остановлен (pid {})".format(", ".join(map(str, pids))))
+    return 0
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--once", action="store_true", help="обработать накопившееся и выйти")
+    ap.add_argument("--stop", action="store_true", help="остановить работающий приёмник и выйти")
     ap.add_argument("-v", "--verbose", action="store_true", help="дублировать журнал в консоль")
     args = ap.parse_args()
+    if args.stop:
+        return stop_running()
     setup_logging(args.verbose or args.once)
 
-    lock = open(LOCK_PATH, "w")
+    # "a+", а не "w": открытие не должно стирать pid работающего экземпляра.
+    lock = open(LOCK_PATH, "a+")
     try:
         fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
     except OSError:
         if args.once:
             print("Приёмник уже работает в фоне — --once не нужен.")
         return 0  # уже запущен: тихо выходим
+    lock.seek(0)
+    lock.truncate()
     lock.write(str(os.getpid()))
     lock.flush()
 

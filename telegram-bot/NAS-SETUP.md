@@ -63,13 +63,10 @@
   export PYTHONUNBUFFERED=1
   {
     date
+    echo "0. версия кода: $(grep -c 'cmd_week' listener/commands.py)"
+    ls -l listener/listener.py listener/commands.py
     echo "1. останавливаю бота"
-    pid=$(cat listener/listener.lock 2>/dev/null)
-    if [ -n "$pid" ] && grep -q listener "/proc/$pid/cmdline" 2>/dev/null; then
-      kill "$pid"; sleep 5; kill -9 "$pid" 2>/dev/null; echo "   остановлен (pid $pid)"
-    else
-      echo "   бот не был запущен"
-    fi
+    python3 listener/listener.py --stop
     echo "2. проверяю туннель"
     python3 vpn/awg_setup.py ensure
     python3 vpn/awg_setup.py status
@@ -82,9 +79,9 @@
     echo "=== ГОТОВО ==="
   } > update.log 2>&1
   ```
-  Бот останавливается по номеру процесса из `listener/listener.lock`. **Не используйте
-  `pkill -f …listener.py` в задачах Планировщика:** DSM передаёт весь текст сценария одной
-  командой, и `pkill` находит и убивает саму задачу (в тексте ниже есть строка запуска бота).
+  `listener.py --stop` находит бота по аргументам запуска процесса, поэтому не задевает саму
+  задачу. **Не используйте `pkill -f …listener.py` в задачах Планировщика:** DSM передаёт весь
+  текст сценария одной командой, и `pkill` убивает саму задачу.
 
 **ОК** → выделить → **Выполнить**. Через 1–2 минуты открыть `home/bot/update.log`:
 должно быть «Telegram через туннель: доступен», текст сообщения на завтра, новый pid и `=== ГОТОВО ===`.
