@@ -14,7 +14,7 @@
 
 | Ветка | Что это | Состояние |
 |---|---|---|
-| `claude/zen-dijkstra-7kvorw` | Расписание дочери (РЭУ) в Telegram: `rea-schedule-bot/`, первая задача бота | Ноябрь 2026, ждёт установки на NAS |
+| `claude/zen-dijkstra-7kvorw` | Первая версия рассылки расписания (РЭУ). Перенесена в `main`: `telegram-bot/rea-schedule/` | Ноябрь 2026, архив |
 | `claude/monitor-admission-orders-jkvoxq` | Мониторинг приказов о зачислении РЭУ им. Плеханова: почасовая проверка страницы, журнал запусков в `monitoring/` | Август 2026, расписание в Routine окружения |
 | `claude/massage-survey-results-k5o4fm` | Опрос «Как прошёл массаж»: две страницы на GitHub Pages, ответы в Google-таблицу через Apps Script | Август 2026 |
 | `claude/website-security-analysis-g7ersh` | Анализ безопасности сайта fstravel: разбор и HTML-отчёт | Август 2026 |
