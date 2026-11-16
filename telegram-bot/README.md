@@ -11,7 +11,7 @@
   listener/              приёмник: команды, приём заметок и файлов
     listener.py
     commands.py          здесь добавляются новые команды
-  vpn/xray_setup.py      VPN-клиент xray по подписке Happ → прокси 127.0.0.1:10809 для бота
+  vpn/awg_setup.py       AmneziaWG (.conf) → прокси 127.0.0.1:10809 для бота (awg-wireproxy)
   data/                  то, что пришло из Telegram (в git не попадает)
     inbox.jsonl          по записи на сообщение
     files/ГГГГ-ММ/       присланные файлы
@@ -44,9 +44,10 @@
 ## Обход блокировки Telegram
 
 С весны 2026 `api.telegram.org` из России недоступен (проверено на NAS 16.11.2026).
-Бот ходит в Telegram через локальный прокси: `vpn/xray_setup.py` ставит xray (ARM64,
-с проверкой SHA-256), читает подписку из `vpn/subscription.txt`, перебирает серверы и
-оставляет первый, через который открылся Telegram. В `config.json`:
+Бот ходит в Telegram через локальный прокси: `vpn/awg_setup.py` ставит
+[awg-wireproxy](https://github.com/bropines/awg-wireproxy) (ARM64, проверка SHA-256) и
+поднимает туннель AmneziaWG по файлу `vpn/amnezia.conf` — без root и без изменения сети NAS.
+Для NAS нужна **отдельная** конфигурация Amnezia (свой ключ), не та же, что на Mac/телефоне. В `config.json`:
 `"proxy": "http://127.0.0.1:10809"`. Через прокси идёт только бот; остальной трафик NAS
 и запросы к российским сайтам (расписание) — напрямую.
 

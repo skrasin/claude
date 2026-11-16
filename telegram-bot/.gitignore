@@ -7,9 +7,9 @@ data/
 **/*.log.*
 **/dump.html
 __pycache__/
-vpn/xray
-vpn/xray.new
-vpn/*.zip
-vpn/subscription.txt
-vpn/xray*.json
-vpn/xray.pid
+vpn/wireproxy
+vpn/wireproxy.new
+vpn/*.tar.gz
+vpn/*.conf
+vpn/*.pid
+vpn/*.old

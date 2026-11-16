@@ -128,10 +128,10 @@ ssh nas 'chmod 600 ~/rea-schedule-bot/config.json && cd ~/rea-schedule-bot && py
 в России блокируется у провайдеров, МГТС тоже. На Mac и телефоне Telegram работает через VPN.
 
 Поэтому в `config.json` есть поле `"proxy": "http://host:port"`: через этот HTTP-прокси идут все
-запросы бота к Telegram. Решение: VPN владельца — Happ с подпиской (https://…), тариф
-разрешает ещё одно устройство. На NAS ставится xray (`vpn/xray_setup.py`), прокси
-`http://127.0.0.1:10809`. В облачной сессии запуск xray для проверки запрещён — проверен
-только разбор подписки; работа xray проверяется на NAS.
+запросы бота к Telegram. Решение (владелец выбрал Amnezia вместо Happ): на NAS
+awg-wireproxy (github.com/bropines/awg-wireproxy, userspace, без root) по отдельному .conf
+AmneziaWG → прокси `http://127.0.0.1:10809`. Скрипт `vpn/awg_setup.py`. В облачной сессии
+запускать VPN-клиенты для проверки нельзя — проверен только разбор .conf.
 
 ## 6. Открытые вопросы
 - Установить и проверить задачу №1 на NAS (см. выше).
