@@ -137,9 +137,14 @@ NAS получает ключ **только для чтения** репози�
 4. На NAS — проверить ключ GitHub и подключиться:
    ```bash
    # ssh-keyscan в DSM нет: ключ GitHub берём из официального API GitHub по HTTPS
-   curl -sS https://api.github.com/meta | python3 -c 'import json,sys; [print("[ssh.github.com]:443 "+k) for k in json.load(sys.stdin)["ssh_keys"] if k.startswith("ssh-ed25519")]' > /tmp/gh.key
-   ssh-keygen -lf /tmp/gh.key        # должно быть SHA256:+DiY3wvvV6TuJJhbpZisF/zLDA0zPMSvHdkr4UvCOqU
-   cat /tmp/gh.key >> ~/.ssh/known_hosts && rm /tmp/gh.key
+   # Все три ключа GitHub: старый ssh в DSM спрашивает ECDSA, одного ED25519 мало
+   curl -sS https://api.github.com/meta | python3 -c 'import json,sys; [print("[ssh.github.com]:443 "+k) for k in json.load(sys.stdin)["ssh_keys"]]' > /tmp/gh.key
+   ssh-keygen -lf /tmp/gh.key
+   # ED25519 SHA256:+DiY3wvvV6TuJJhbpZisF/zLDA0zPMSvHdkr4UvCOqU
+   # ECDSA   SHA256:p2QAMXNIC1TJYWeIOttrVc98/R1BUFWu3/LiyKgUfQM
+   # RSA     SHA256:uNiVztksCsDhcc0u9e8BujQXVUpKZIDTMczCvj3tD2s
+   grep -v 'ssh.github.com' ~/.ssh/known_hosts > /tmp/kh; cat /tmp/gh.key >> /tmp/kh
+   mv /tmp/kh ~/.ssh/known_hosts && chmod 600 ~/.ssh/known_hosts && rm /tmp/gh.key
    ssh -T github-deploy              # «Hi skrasin/claude! You've successfully authenticated…»
    ```
 5. На NAS — скачать репозиторий и проверить:
