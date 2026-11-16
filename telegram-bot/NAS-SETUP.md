@@ -44,9 +44,12 @@
 - **Настройки задачи → сценарий:**
   ```bash
   cd /volume1/homes/fancymusic/bot
+  python3 tools/autoupdate.py >> tools/autoupdate.log 2>&1
   python3 vpn/awg_setup.py ensure >> vpn/ensure.log 2>&1
   nohup python3 listener/listener.py >/dev/null 2>&1 &
   ```
+  Первая строка — автообновление из GitHub (нужен `~/bot-repo`, см. конец файла). Без
+  `~/bot-repo` она пришлёт одно «⚠️» и не мешает остальному.
 
 Каждые 10 минут она поднимает VPN-туннель и приёмник, если что-то упало
 (в том числе после перезагрузки NAS). Расписание и напоминания отправляет приёмник —
@@ -156,3 +159,17 @@ NAS получает ключ **только для чтения** репози�
    ```
    Последняя команда показывает расхождения кода на NAS и в репозитории (ожидается пусто
    или почти пусто; файлы, которые есть только на NAS — настройки, логи, VPN — скрыты).
+
+6. Включить автообновление (из того же Терминала на NAS):
+   ```bash
+   cd ~/bot-repo && git pull --ff-only
+   cp telegram-bot/tools/autoupdate.py ~/bot/tools/
+   cd ~/bot && python3 tools/autoupdate.py
+   ```
+   Первый запуск копирует весь код из репозитория в `~/bot` и перезапускает бота; в Telegram
+   приходит «🔄 Бот обновлён». Затем в Планировщике добавить в `bot-run` строку
+   `python3 tools/autoupdate.py >> tools/autoupdate.log 2>&1` (см. шаг 4).
+
+**Дальше:** всё, что попадает в `main`, через ≤10 минут оказывается на NAS. ZIP, File Station и
+`bot-update` больше не нужны (`bot-update` можно оставить для ручной диагностики).
+Журнал: `~/bot/tools/autoupdate.log`. Принудительно: `python3 tools/autoupdate.py --force`.

@@ -10,6 +10,7 @@
   config.json            токен и chat_id (chmod 600, в git не попадает)
   common/tg.py           библиотека: send, getUpdates, скачивание файлов, run_task
   tools/tg_check.py      проверка связи, поиск chat_id
+  tools/autoupdate.py    автообновление из GitHub (~/bot-repo, ключ только для чтения)
   listener/              приёмник: команды, приём заметок и файлов
     listener.py
     commands.py          здесь добавляются новые команды

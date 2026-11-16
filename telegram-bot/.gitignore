@@ -14,3 +14,4 @@ vpn/*.conf
 vpn/*.pid
 vpn/*.old
 rea-schedule/probe.log
+tools/autoupdate.state.json*
