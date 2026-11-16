@@ -105,14 +105,30 @@ def cmd_reminders(ctx, args):
     return reminders.describe()
 
 
+def _timetable():
+    from listener import reminders
+    return reminders.load_module("rea-schedule/from_file.py")
+
+
+def cmd_tomorrow(ctx, args):
+    return _timetable().build()
+
+
+def cmd_week(ctx, args):
+    return _timetable().build_week()
+
+
 def cmd_exams(ctx, args):
     from listener import reminders
     return reminders.load_module("rea-schedule/from_file.py").list_exams()
 
 
+# Порядок в меню Telegram (кнопка «/»): сначала частые.
+MENU_ORDER = ["tomorrow", "week", "exams", "inbox", "reminders", "status", "ping", "id", "help"]
+
 # имя: (функция, описание, только_для_владельца)
 COMMANDS = {
-    "start": (cmd_help, "список команд", False),
+    "start": (cmd_help, "список команд", False),  # в меню Telegram не показывается
     "help": (cmd_help, "список команд", False),
     "id": (cmd_id, "показать chat_id (и id канала у пересланного)", False),
     "ping": (cmd_ping, "проверка, что бот жив", True),
@@ -120,4 +136,6 @@ COMMANDS = {
     "inbox": (cmd_inbox, "последние сохранённые сообщения: /inbox 10", True),
     "reminders": (cmd_reminders, "список напоминаний", True),
     "exams": (cmd_exams, "предстоящие зачёты дочери", True),
+    "tomorrow": (cmd_tomorrow, "расписание дочери на завтра", True),
+    "week": (cmd_week, "расписание дочери на эту неделю", True),
 }

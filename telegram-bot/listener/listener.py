@@ -249,8 +249,18 @@ class Listener:
             save_state(self.state)
         return len(updates)
 
+    def register_menu(self):
+        """Список команд в Telegram (появляется при вводе «/»). Ошибка не критична."""
+        try:
+            cmds = [{"command": n, "description": commands.COMMANDS[n][1]}
+                    for n in commands.MENU_ORDER if n in commands.COMMANDS]
+            self.bot.call("setMyCommands", {"commands": cmds}, retries=1)
+        except Exception as e:
+            log.warning("не удалось зарегистрировать меню команд: %s", e)
+
     def run_forever(self):
         log.info("приёмник запущен, pid %s", os.getpid())
+        self.register_menu()
         delay = 5
         while not _stop:
             try:

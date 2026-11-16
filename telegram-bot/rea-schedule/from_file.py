@@ -7,6 +7,7 @@
     python3 rea-schedule/from_file.py                  # показать сообщение на завтра
     python3 rea-schedule/from_file.py --date 2026-11-17
     python3 rea-schedule/from_file.py --exams [2026-11-19]   # список предстоящих зачётов
+    python3 rea-schedule/from_file.py --week [2026-11-18]    # неделя
 """
 
 import datetime as dt
@@ -112,6 +113,38 @@ def exam_countdown(days, today):
     return "🎓 <b>Зачёты:</b>\n" + "\n".join(lines) if lines else ""
 
 
+def build_week(today=None):
+    """Расписание на текущую неделю (пн–сб); в воскресенье — на следующую."""
+    today = today or dt.datetime.now(MSK).date()
+    monday = today - dt.timedelta(days=today.weekday())
+    if today.weekday() == 6:
+        monday += dt.timedelta(days=7)
+    days, last = load_days()
+    saturday = monday + dt.timedelta(days=5)
+    out = ["<b>Расписание на неделю {}–{}</b>".format(monday.strftime("%d.%m"), saturday.strftime("%d.%m"))]
+    for i in range(6):
+        d = monday + dt.timedelta(days=i)
+        title = "{} {}".format(sb.WEEKDAYS[d.weekday()].capitalize(), d.strftime("%d.%m"))
+        if d == today:
+            title += " (сегодня)"
+        out.append("")
+        if d not in days:
+            out.append("<b>{}</b> — нет данных в файле".format(title))
+            continue
+        if not days[d]:
+            out.append("<b>{}</b> — занятий нет".format(title))
+            continue
+        out.append("<b>{}</b>".format(title))
+        for l in days[d]:
+            tm = "{}–{}".format(l["start"], l["end"]) if l["end"] else l["start"]
+            kind = ("🎓 " if is_exam(l) else "") + l["kind"]
+            out.append("{} {}{}".format(tm, sb.html.escape(l["subject"]),
+                                        " <i>({})</i>".format(sb.html.escape(kind)) if kind else ""))
+    if last and last < saturday:
+        out.append("\n⏳ Данные в файле только до {} — пришлите новые скриншоты.".format(last.strftime("%d.%m")))
+    return "\n".join(out)
+
+
 def list_exams(today=None):
     today = today or dt.datetime.now(MSK).date()
     items = upcoming_exams(today)
@@ -130,6 +163,8 @@ if __name__ == "__main__":
     if len(sys.argv) >= 2 and sys.argv[1] == "--exams":
         day = dt.date.fromisoformat(sys.argv[2]) if len(sys.argv) == 3 else dt.datetime.now(MSK).date()
         print(list_exams(day))
+    elif len(sys.argv) >= 2 and sys.argv[1] == "--week":
+        print(build_week(dt.date.fromisoformat(sys.argv[2]) if len(sys.argv) == 3 else None))
     elif len(sys.argv) == 3 and sys.argv[1] == "--date":
         t = dt.date.fromisoformat(sys.argv[2])
         print(build_for(t, today=t - dt.timedelta(days=1)))
