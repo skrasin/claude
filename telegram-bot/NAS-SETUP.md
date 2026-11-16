@@ -117,3 +117,36 @@
 | «Telegram через туннель: НЕДОСТУПЕН» | `vpn/wireproxy.log` → Claude; проверить, что Amnezia-сервер работает |
 | `/exams` — «Не знаю такой команды» | папка `listener` не перезаписалась: повторить шаги 2 и 5 |
 | В 20:00 ничего не пришло | `listener/listener.log` → Claude |
+
+---
+
+## Автообновление из GitHub: доступ NAS к репозиторию (один раз, из дома)
+NAS получает ключ **только для чтения** репозитория `skrasin/claude` (deploy key) и сам
+скачивает обновления. Подключение к GitHub — по SSH через порт 443 (`ssh.github.com`).
+
+1. На Mac: `ssh nas`
+2. На NAS — ключ и настройка:
+   ```bash
+   ssh-keygen -t ed25519 -N "" -C "nas-bot read-only skrasin/claude" -f ~/.ssh/id_ed25519_github_deploy
+   printf '\nHost github-deploy\n  HostName ssh.github.com\n  Port 443\n  User git\n  IdentityFile ~/.ssh/id_ed25519_github_deploy\n  IdentitiesOnly yes\n' >> ~/.ssh/config
+   chmod 600 ~/.ssh/config ~/.ssh/id_ed25519_github_deploy
+   cat ~/.ssh/id_ed25519_github_deploy.pub
+   ```
+3. GitHub → `skrasin/claude` → **Settings → Deploy keys → Add deploy key**: Title
+   `NAS bot (read-only)`, Key — строка из `.pub`, **«Allow write access» не отмечать**.
+4. На NAS — проверить ключ GitHub и подключиться:
+   ```bash
+   ssh-keyscan -p 443 -t ed25519 ssh.github.com 2>/dev/null > /tmp/gh.key
+   ssh-keygen -lf /tmp/gh.key        # должно быть SHA256:+DiY3wvvV6TuJJhbpZisF/zLDA0zPMSvHdkr4UvCOqU
+   cat /tmp/gh.key >> ~/.ssh/known_hosts && rm /tmp/gh.key
+   ssh -T github-deploy              # «Hi skrasin/claude! You've successfully authenticated…»
+   ```
+5. На NAS — скачать репозиторий и проверить:
+   ```bash
+   git clone --depth 1 --branch main git@github-deploy:skrasin/claude.git ~/bot-repo
+   echo "@eaDir/" >> ~/bot-repo/.git/info/exclude
+   cd ~/bot-repo && git log --oneline -1 && git pull --ff-only
+   diff -rq ~/bot-repo/telegram-bot ~/bot | grep -v -e '^Only in /volume1/homes/fancymusic/bot' -e '^Only in /var/services/homes/fancymusic/bot'
+   ```
+   Последняя команда показывает расхождения кода на NAS и в репозитории (ожидается пусто
+   или почти пусто; файлы, которые есть только на NAS — настройки, логи, VPN — скрыты).
