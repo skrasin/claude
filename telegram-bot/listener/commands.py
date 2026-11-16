@@ -100,6 +100,11 @@ def cmd_inbox(ctx, args):
     return "\n".join(out)
 
 
+def cmd_reminders(ctx, args):
+    from listener import reminders
+    return reminders.describe()
+
+
 # имя: (функция, описание, только_для_владельца)
 COMMANDS = {
     "start": (cmd_help, "список команд", False),
@@ -108,4 +113,5 @@ COMMANDS = {
     "ping": (cmd_ping, "проверка, что бот жив", True),
     "status": (cmd_status, "состояние NAS", True),
     "inbox": (cmd_inbox, "последние сохранённые сообщения: /inbox 10", True),
+    "reminders": (cmd_reminders, "список напоминаний", True),
 }

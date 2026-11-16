@@ -30,7 +30,7 @@ import time
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(HERE, ".."))
 from common import tg  # noqa: E402
-from listener import commands  # noqa: E402
+from listener import commands, reminders  # noqa: E402
 
 STATE_PATH = os.path.join(HERE, "state.json")
 LOCK_PATH = os.path.join(HERE, "listener.lock")
@@ -229,6 +229,13 @@ class Listener:
                 tg.esc((text or msg.get("caption") or "[без текста]")[:200])))
         log.info("незнакомый чат %s", cid)
 
+    def check_reminders(self):
+        try:
+            if reminders.check(self.bot, self.state):
+                save_state(self.state)
+        except Exception:
+            log.exception("ошибка напоминаний")
+
     def poll_once(self, timeout):
         offset = self.state.get("offset")
         updates = self.bot.get_updates(offset=offset, timeout=timeout, allowed_updates=ALLOWED_UPDATES)
@@ -247,6 +254,7 @@ class Listener:
         delay = 5
         while not _stop:
             try:
+                self.check_reminders()
                 self.poll_once(POLL_TIMEOUT)
                 delay = 5
             except tg.TelegramError as e:
