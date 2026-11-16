@@ -136,7 +136,8 @@ NAS получает ключ **только для чтения** репози�
    `NAS bot (read-only)`, Key — строка из `.pub`, **«Allow write access» не отмечать**.
 4. На NAS — проверить ключ GitHub и подключиться:
    ```bash
-   ssh-keyscan -p 443 -t ed25519 ssh.github.com 2>/dev/null > /tmp/gh.key
+   # ssh-keyscan в DSM нет: ключ GitHub берём из официального API GitHub по HTTPS
+   curl -sS https://api.github.com/meta | python3 -c 'import json,sys; [print("[ssh.github.com]:443 "+k) for k in json.load(sys.stdin)["ssh_keys"] if k.startswith("ssh-ed25519")]' > /tmp/gh.key
    ssh-keygen -lf /tmp/gh.key        # должно быть SHA256:+DiY3wvvV6TuJJhbpZisF/zLDA0zPMSvHdkr4UvCOqU
    cat /tmp/gh.key >> ~/.ssh/known_hosts && rm /tmp/gh.key
    ssh -T github-deploy              # «Hi skrasin/claude! You've successfully authenticated…»
