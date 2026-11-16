@@ -35,7 +35,14 @@ def main():
     cfg = tg.load_config()
     bot = tg.Bot.from_config(cfg)
 
-    me = bot.me()
+    print("Прокси: {}".format(cfg.get("proxy") or "нет (прямое подключение)"))
+    try:
+        me = bot.me(retries=0)
+    except tg.TelegramError as e:
+        if e.code is None:
+            sys.exit("Нет связи с Telegram: {}\n"
+                     "В России api.telegram.org заблокирован — нужен прокси (\"proxy\" в config.json).".format(e))
+        raise
     print("Бот: @{} ({}), id {}".format(me.get("username"), me.get("first_name"), me.get("id")))
     print("Владелец (owner_chat_id): {}".format(cfg.get("owner_chat_id")))
 

@@ -82,15 +82,19 @@ def split_text(text, limit=MAX_LEN):
 
 
 class Bot:
-    def __init__(self, token, owner_chat_id=None, api_base=None):
+    def __init__(self, token, owner_chat_id=None, api_base=None, proxy=None):
         self.token = token
         self.owner = owner_chat_id
         self.api_base = (api_base or API_BASE).rstrip("/")
+        # proxy: "http://host:port" — HTTP-прокси (например, xray/VPN-клиент), через который
+        # идут все запросы к Telegram. Нужен в России: api.telegram.org заблокирован.
+        handlers = [urllib.request.ProxyHandler({"http": proxy, "https": proxy} if proxy else {})]
+        self._opener = urllib.request.build_opener(*handlers)
 
     @classmethod
     def from_config(cls, cfg=None):
         cfg = cfg or load_config()
-        return cls(cfg["token"], cfg.get("owner_chat_id"), cfg.get("api_base"))
+        return cls(cfg["token"], cfg.get("owner_chat_id"), cfg.get("api_base"), cfg.get("proxy"))
 
     # ------------------------------------------------------------ базовый вызов
 
@@ -105,7 +109,7 @@ class Bot:
         for attempt in range(retries + 1):
             req = urllib.request.Request(url, data=body, headers={"Content-Type": "application/json"})
             try:
-                with urllib.request.urlopen(req, timeout=timeout) as r:
+                with self._opener.open(req, timeout=timeout) as r:
                     data = json.loads(r.read().decode("utf-8"))
             except urllib.error.HTTPError as e:
                 try:
@@ -132,8 +136,8 @@ class Bot:
 
     # ------------------------------------------------------------ удобные методы
 
-    def me(self):
-        return self.call("getMe")
+    def me(self, retries=3):
+        return self.call("getMe", retries=retries, timeout=15)
 
     def send(self, text, chat_id=None, parse_mode="HTML", silent=False, preview=False, reply_to=None):
         """Отправить текст (длинный режется на части). Возвращает последнее сообщение."""
@@ -189,7 +193,7 @@ class Bot:
         os.makedirs(os.path.dirname(dest_path), exist_ok=True)
         tmp = dest_path + ".part"
         try:
-            with urllib.request.urlopen(url, timeout=120) as r, open(tmp, "wb") as f:
+            with self._opener.open(url, timeout=120) as r, open(tmp, "wb") as f:
                 while True:
                     chunk = r.read(64 * 1024)
                     if not chunk:

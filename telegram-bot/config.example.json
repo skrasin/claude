@@ -1,5 +1,6 @@
 {
   "token": "ВСТАВЬТЕ_ТОКЕН_ОТ_BOTFATHER",
   "owner_chat_id": 349362961,
-  "allowed_chat_ids": []
+  "allowed_chat_ids": [],
+  "proxy": ""
 }

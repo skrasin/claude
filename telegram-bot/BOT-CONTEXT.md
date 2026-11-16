@@ -121,6 +121,15 @@ ssh nas 'chmod 600 ~/rea-schedule-bot/config.json && cd ~/rea-schedule-bot && py
 - Container Manager (Docker) на DS218, скорее всего, недоступен (ARM-модель), поэтому
   приёмник запускается обычным python3 через Планировщик.
 
+## 5а. Telegram с NAS заблокирован (выяснено 16.11.2026)
+
+Проверка на NAS: Python 3.8.15 есть (`/usr/bin/python3`), архитектура aarch64, но
+`curl https://api.telegram.org` → `Failed to connect … port 443` (таймаут). С весны 2026 Telegram
+в России блокируется у провайдеров, МГТС тоже. На Mac и телефоне Telegram работает через VPN.
+
+Поэтому в `config.json` есть поле `"proxy": "http://host:port"`: через этот HTTP-прокси идут все
+запросы бота к Telegram. Откуда взять прокси — решается (VPN-клиент на NAS / Mac / relay за рубежом).
+
 ## 6. Открытые вопросы
 - Установить и проверить задачу №1 на NAS (см. выше).
 - Удалить бесполезный сетевой секрет `api.telegram.org` из облачной среды.
