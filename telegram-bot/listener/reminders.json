@@ -10,7 +10,7 @@
       "чт",
       "пт"
     ],
-    "text": "📅 <b>Пора отправить дочери расписание на завтра</b>\n<a href=\"https://rasp.rea.ru/?q=15.26%D0%B4-%D1%82%D1%8D01%2F26%D0%B1\">Расписание группы на rasp.rea.ru</a>",
-    "enabled": true
+    "enabled": true,
+    "builder": "rea_timetable"
   }
 ]
