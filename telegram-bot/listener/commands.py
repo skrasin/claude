@@ -130,12 +130,12 @@ MENU_ORDER = ["tomorrow", "week", "exams", "inbox", "reminders", "status", "ping
 COMMANDS = {
     "start": (cmd_help, "список команд", False),  # в меню Telegram не показывается
     "help": (cmd_help, "список команд", False),
-    "id": (cmd_id, "показать chat_id (и id канала у пересланного)", False),
-    "ping": (cmd_ping, "проверка, что бот жив", True),
-    "status": (cmd_status, "состояние NAS", True),
-    "inbox": (cmd_inbox, "последние сохранённые сообщения: /inbox 10", True),
-    "reminders": (cmd_reminders, "список напоминаний", True),
-    "exams": (cmd_exams, "предстоящие зачёты дочери", True),
-    "tomorrow": (cmd_tomorrow, "расписание дочери на завтра", True),
-    "week": (cmd_week, "расписание дочери на эту неделю", True),
+    "id": (cmd_id, "показать chat_id", False),
+    "ping": (cmd_ping, "пинг", True),
+    "status": (cmd_status, "состояние NAS: аптайм, нагрузка, свободное место", True),
+    "inbox": (cmd_inbox, "Входящие сообщения", True),
+    "reminders": (cmd_reminders, "Список напоминаний", True),
+    "exams": (cmd_exams, "Предстоящие зачеты и экзамены", True),
+    "tomorrow": (cmd_tomorrow, "Расписание на завтра", True),
+    "week": (cmd_week, "Расписание на текущую неделю", True),
 }
