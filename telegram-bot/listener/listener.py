@@ -31,7 +31,7 @@ import time
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(HERE, ".."))
 from common import tg  # noqa: E402
-from listener import commands, reminders  # noqa: E402
+from listener import calendar_invites, commands, reminders  # noqa: E402
 
 STATE_PATH = os.path.join(HERE, "state.json")
 LOCK_PATH = os.path.join(HERE, "listener.lock")
@@ -165,6 +165,7 @@ class Listener:
         self.started_at = time.time()
         self.state = load_state()
         self.notified_strangers = set(self.state.get("notified_strangers", []))
+        self.calendar = calendar_invites.CalendarInvitations(bot, self.state)
 
     def handle_update(self, upd):
         msg = upd.get("message") or upd.get("edited_message") or upd.get("channel_post")
@@ -177,7 +178,7 @@ class Listener:
         if upd.get("edited_message"):
             return  # правки не обрабатываем повторно
         text = (msg.get("text") or "").strip()
-        if text.startswith("/"):
+        if text.startswith("/") and not msg.get("forward_origin"):
             self.on_command(msg, text)
         elif chat_id == self.owner:
             entry, skipped = save_to_inbox(self.bot, msg)
@@ -187,6 +188,8 @@ class Listener:
                               reply_to=msg["message_id"])
             else:
                 self.bot.react(chat_id, msg["message_id"])
+            if msg["chat"].get("type") == "private":
+                self.calendar.handle(entry, msg, skipped)
         # Сообщения прочих разрешённых чатов без команды молча игнорируются.
 
     def on_command(self, msg, text):

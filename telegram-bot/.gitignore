@@ -1,4 +1,5 @@
 config.json
+calendar.local.json
 data/
 **/state.json
 **/state.json.tmp
